@@ -40,11 +40,14 @@ impl Node for SumNode {
     type Output = Output;
 
     fn validate(&self, input: &Self::Input) -> Result<(), AppError> {
-        if input.variables.len() > 1_000_000 {
-            return Err(AppError::bad("máximo de 1e6 números"));
-        }
-        Ok(())
+    if input.variables.is_empty() {
+        return Err(AppError::bad("envie ao menos 1 número em 'variables'"));
     }
+    if input.variables.len() > 1_000_000 {
+        return Err(AppError::bad("máximo de 1e6 números"));
+    }
+    Ok(())
+}
 
     fn process(&self, input: Self::Input) -> Result<Self::Output, AppError> {
         let total = domain::sum_all(&input.variables);
