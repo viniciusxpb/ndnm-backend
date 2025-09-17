@@ -1,0 +1,3 @@
+[workspace]
+members = ["ndnm-core", "node-sum"]
+resolver = "2"
