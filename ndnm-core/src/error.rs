@@ -29,14 +29,20 @@ impl IntoResponse for AppError {
             AppError::BadRequest(msg) => {
                 let body = ErrEnvelope {
                     status: "error",
-                    error: ErrDetail { code: "BAD_REQUEST", message: msg },
+                    error: ErrDetail {
+                        code: "BAD_REQUEST",
+                        message: msg,
+                    },
                 };
                 (StatusCode::BAD_REQUEST, Json(body)).into_response()
             }
             AppError::Internal => {
                 let body = ErrEnvelope {
                     status: "error",
-                    error: ErrDetail { code: "INTERNAL", message: "internal error".into() },
+                    error: ErrDetail {
+                        code: "INTERNAL",
+                        message: "internal error".into(),
+                    },
                 };
                 (StatusCode::INTERNAL_SERVER_ERROR, Json(body)).into_response()
             }
@@ -45,5 +51,7 @@ impl IntoResponse for AppError {
 }
 
 impl AppError {
-    pub fn bad<S: Into<String>>(s: S) -> Self { AppError::BadRequest(s.into()) }
+    pub fn bad<S: Into<String>>(s: S) -> Self {
+        AppError::BadRequest(s.into())
+    }
 }
