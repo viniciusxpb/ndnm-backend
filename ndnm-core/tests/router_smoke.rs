@@ -1,7 +1,9 @@
+// ndnm-core/tests/router_smoke.rs
 use axum::{body::Body, http::{Request, StatusCode}};
 use ndnm_core::{self as core, AppError, Node};
 use serde::{Deserialize, Serialize};
-use tower::ServiceExt; // for `oneshot`
+// Corrigido: O trait `ServiceExt` é importado diretamente de `tower`.
+use tower::ServiceExt;
 
 // Node de teste bem simples
 #[derive(Clone, Default)]
@@ -10,7 +12,8 @@ struct DummyNode;
 #[derive(Debug, Deserialize)]
 struct In { x: i64, y: i64 }
 
-#[derive(Debug, Serialize, PartialEq)]
+// Corrigido: Adicionado `Deserialize` para que possamos ler a resposta JSON.
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 struct Out { sum: i64 }
 
 impl Node for DummyNode {
