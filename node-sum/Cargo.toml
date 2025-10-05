@@ -1,3 +1,4 @@
+# node-sum/Cargo.toml
 [package]
 name = "node-sum"
 version = "0.1.0"
@@ -5,8 +6,14 @@ edition = "2021"
 default-run = "node-sum"
 
 [dependencies]
+# Corrigido o erro de digitação de "nm-core" para "ndnm-core"
 ndnm-core = { path = "../ndnm-core" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 clap = { version = "4.5", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
+
+# Dependências necessárias apenas para compilar e rodar os testes.
+[dev-dependencies]
+axum = "0.7"
+tower = { version = "0.4", features = ["util"] }

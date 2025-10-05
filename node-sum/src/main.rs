@@ -6,18 +6,18 @@ use serde::{Deserialize, Serialize};
 
 /// DTOs: Estruturas de dados para entrada e saída.
 #[derive(Debug, Deserialize)]
-struct Input {
+pub struct Input { // Adicionado 'pub'
     variables: Vec<i64>,
 }
 
 #[derive(Debug, Serialize)]
-struct Output {
+pub struct Output { // Adicionado 'pub'
     response: i64,
 }
 
 /// Implementação do Node para "sum"
 #[derive(Default)]
-struct SumNode;
+pub struct SumNode; // Adicionado 'pub'
 
 impl Node for SumNode {
     type Input = Input;
@@ -46,6 +46,6 @@ async fn main() -> Result<(), AppError> {
         SumNode::default(),
         "node-sum",
         "Node que soma uma lista de inteiros",
-        env!("CARGO_MANIFEST_DIR"), // Corrigido: Passa o caminho do seu próprio diretório.
+        env!("CARGO_MANIFEST_DIR"),
     ).await
 }
