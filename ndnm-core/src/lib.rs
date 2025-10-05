@@ -1,12 +1,16 @@
+// ndnm-core/src/lib.rs
 //! Core: servidor genérico, erros, config e o trait Node.
 
 mod server;
 mod error;
 mod config;
+mod runner;
 
+// Re-exporta os componentes essenciais para que outros pacotes (como node-sum) possam usá-los.
 pub use config::Config;
 pub use error::AppError;
 pub use server::{router, serve, ServerOpts};
+pub use runner::run_node;
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
