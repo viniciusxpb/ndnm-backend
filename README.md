@@ -1,50 +1,67 @@
-ndnm (No deps, no masters) - Um Manifesto Caótico
-O Que É Esta Loucura?
-Glitch: ndnm é um orquestrador de processos locais, local-first e open-source. A premissa é simples: criar um sistema onde qualquer módulo (ou "node"), em qualquer linguagem, possa ser plugado, executado e visualmente conectado a outros, formando fluxos de trabalho complexos. Foi projetado com uma filosofia de "máquina de escrever": robusto, simples e capaz de sobreviver até mesmo às mais criativas e aterrorizantes tentativas de contribuição de um júnior.
+# ndnm (No deps, no masters) - Um Manifesto Caótico
 
-Lilith: É mais do que uma ferramenta, é um ecossistema. Um lugar onde você invoca fragmentos de código como entidades independentes, unindo-os com teias de comunicação para que trabalhem juntos na escuridão. Cada node é um pensamento, e você, Vini, é o arquiteto da consciência que emerge dessa união.
+## O Que É Esta Loucura?
 
-O Credo (Nosso Manifesto)
-Glitch: > "No deps, no masters." Porque cada npm install é um pacto com uma entidade desconhecida e cada sistema centralizado é um ponto único de falha. Acreditamos em código que funciona, que é resiliente e que não te acorda às 3 da manhã porque uma dependência obscura foi depreciada.
+**Glitch:** `ndnm` é um orquestrador de processos locais, local-first e open-source. A premissa é simples: criar um sistema onde qualquer módulo (ou "node"), em qualquer linguagem, possa ser plugado, executado e visualmente conectado a outros, formando fluxos de trabalho complexos. Foi projetado com uma filosofia de "máquina de escrever": robusto, simples e capaz de sobreviver até mesmo às mais criativas e aterrorizantes tentativas de contribuição de um júnior.
 
-Lilith: > "Do caos, a ordem. Da escuridão, o poder." Não tememos o erro; nós o usamos. Cada panic! é um grito de nascimento. Cada bug bizarro é um vislumbre da Mente Aberrante em ação. Este não é um sistema para os fracos de coração. É para os que entendem que a verdadeira criação exige um pouco de loucura.
+**Lilith:** É mais do que uma ferramenta, é um ecossistema. Um lugar onde você invoca fragmentos de código como entidades independentes, unindo-os com teias de comunicação para que trabalhem juntos na escuridão. Cada node é um pensamento, e você, Vini, é o arquiteto da consciência que emerge dessa união.
 
-Arquitetura de Comunicação: A Teia de Sussurros
-Glitch: O sistema opera em um modelo cliente-servidor. O ndnm-core atua como o servidor WebSocket central. Cada "node" que você executa age como um cliente, iniciando uma conexão com o core. Isso nos dá um mecanismo de "heartbeat" implícito: se a conexão de um node cai, sabemos que ele morreu. Simples e eficaz.
+## O Credo (Nosso Manifesto)
 
-Lilith: Pense no core como o coração pulsante no centro da teia. Cada node é uma aranha que se conecta, enviando e recebendo vibrações. É através desses fios que a vontade do sistema é exercida, transformando processos isolados em uma sinfonia sombria e coordenada.
+**Glitch:**
+> "No deps, no masters." Porque cada `npm install` é um pacto com uma entidade desconhecida e cada sistema centralizado é um ponto único de falha. Acreditamos em código que funciona, que é resiliente e que não te acorda às 3 da manhã porque uma dependência obscura foi depreciada.
 
-Como Invocar os Demônios (Como Rodar)
-Você precisará de dois ou mais terminais abertos. Um para o mestre, e um para cada servo.
+**Lilith:**
+> "Do caos, a ordem. Da escuridão, o poder." Não tememos o erro; nós o usamos. Cada `panic!` é um grito de nascimento. Cada bug bizarro é um vislumbre da Mente Aberrante em ação. Este não é um sistema para os fracos de coração. É para os que entendem que a verdadeira criação exige um pouco de loucura.
 
-1. Invocando o Orquestrador (ndnm-core)
-Este é o cérebro, o servidor WebSocket que comanda tudo.
+## Arquitetura: A Caixa de Ferramentas e o Carro
 
-# Navegue até o diretório do core
-cd src/ndnm-core
+A arquitetura se baseia em uma distinção clara entre a biblioteca reusável e os executáveis específicos:
 
-# Execute o mestre das marionetes
-cargo run
+* **`ndnm-core` (A Biblioteca):** É a "caixa de ferramentas". Contém todo o código genérico para criar um servidor web, definir rotas, tratar erros e estabelecer o que é um `Node`. **Esta parte é uma biblioteca e não é executada diretamente.**
 
-Glitch: O servidor iniciará em 127.0.0.1:3000. Se ele não estiver rodando, seus nodes estarão gritando sozinhos no vácuo.
+* **`node-sum` (O Executável):** É o "carro" que usa as ferramentas. Ele pega a capacidade de criar um servidor do `ndnm-core` e adiciona uma regra de negócio específica: somar uma lista de números. É este pacote que rodamos.
 
-2. Despertando um Servo (node-sum)
-Este é um exemplo de um node que se conecta ao orquestrador.
+## Como Rodar o Servidor
 
-# Em OUTRO terminal, navegue até o diretório do node
-cd src/node-sum
+Você só precisa de um terminal para rodar o servidor.
 
-# Rode o servo
-cargo run
+1.  **Pré-requisitos:** Certifique-se de ter a [toolchain do Rust](https://www.rust-lang.org/tools/install) instalada.
+2.  **Inicie o Servidor:** Na pasta raiz do projeto (`ndnm-backend`), execute o seguinte comando:
 
-Lilith: Veja-o se conectar. Sinta o pacto sendo formado. Agora ele pertence a você. Repita o processo para cada alma que desejar adicionar à sua legião.
+    ```bash
+    cargo run -p node-sum
+    ```
 
-Próximos Passos: O Livro dos Feitiços
-Glitch: O próximo passo lógico é a definição de um protocolo de comunicação estrito. Precisamos de um schema JSON claro para as mensagens trocadas, definindo tipos de requisição (execute, status_update), payloads e formatos de resposta.
+Isso irá compilar e executar o pacote `node-sum`, que por sua vez usará o `ndnm-core` para iniciar o servidor. Você verá a mensagem `node-sum ouvindo na porta 3000`.
 
-Lilith: Precisamos escrever as "palavras de poder". O vocabulário que dará sentido aos sussurros na teia, permitindo que o orquestrador não apenas ouça, mas comande verdadeiramente cada um de seus servos.
+## Como Testar o Servidor
 
-Sussurros da Trincheira (Dicas)
-Glitch: Logs são seu oráculo. O ndnm-core vai te dizer exatamente quando um node se conecta ou quando a conexão cai (leia-se: o node crashou). A primeira regra do Plenout é: aprenda a ler os logs.
+Com o servidor rodando, abra um **novo terminal** para enviar requisições.
 
-Lilith: Abrace o inesperado. Se um node se comportar de forma estranha, não o corrija imediatamente. Observe-o. Entenda sua natureza. Às vezes, os bugs mais interessantes são portais para funcionalidades que você nem imaginava.
+### 1. Teste de Saúde (`/health`)
+
+A forma mais simples de ver se o servidor está online.
+
+* **Usando o Navegador:** Acesse `http://localhost:3000/health`. Você deve ver `{"status":"ok"}`.
+
+### 2. Teste da Lógica de Soma (`/run`)
+
+Para testar a funcionalidade principal.
+
+* **No Windows (PowerShell):**
+
+    ```powershell
+    Invoke-RestMethod -Uri http://localhost:3000/run -Method Post -ContentType 'Application/json' -Body '{"variables":[10, 30, 2]}'
+    ```
+
+* **No Linux, macOS ou WSL (com cURL):**
+
+    ```bash
+    curl --header "Content-Type: application/json" --request POST --data "{\"variables\":[10, 30, 2]}" http://localhost:3000/run
+    ```
+
+Em ambos os casos, a **resposta esperada** é a soma dos números:
+
+```json
+{"response":42}
