@@ -1,3 +1,3 @@
 [workspace]
-members = ["ndnm-core", "node-sum"]
+members = ["ndnm-core", "node-sum", "node-subtract"]
 resolver = "2"
