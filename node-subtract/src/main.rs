@@ -6,18 +6,18 @@ use serde::{Deserialize, Serialize};
 
 /// DTOs: Estruturas de dados para entrada e saída.
 #[derive(Debug, Deserialize)]
-struct Input {
+pub struct Input { // Adicionado 'pub'
     variables: Vec<i64>,
 }
 
 #[derive(Debug, Serialize)]
-struct Output {
+pub struct Output { // Adicionado 'pub'
     response: i64,
 }
 
 /// Implementação do Node para "subtract"
 #[derive(Default)]
-struct SubtractNode;
+pub struct SubtractNode; // Adicionado 'pub'
 
 impl Node for SubtractNode {
     type Input = Input;
@@ -46,6 +46,6 @@ async fn main() -> Result<(), AppError> {
         SubtractNode::default(),
         "node-subtract",
         "Node que subtrai uma lista de inteiros a partir do primeiro número",
-        env!("CARGO_MANIFEST_DIR"), // Corrigido: Passa o caminho do seu próprio diretório.
+        env!("CARGO_MANIFEST_DIR"),
     ).await
 }
