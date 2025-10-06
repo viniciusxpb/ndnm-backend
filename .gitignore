@@ -1,1 +1,26 @@
+# .gitignore
+
+# Rust/Cargo build artifacts
 /target
+Cargo.lock
+
+# Pasta com os modelos de IA
+/models/
+
+# Arquivos de log
+*.log
+
+# Arquivos temporários de editores
+*.swp
+*.swo
+*~
+*.bak
+*.rs.bk
+
+# Arquivos de configuração de IDEs
+.idea/
+.vscode/
+
+# Arquivos de sistema operacional
+.DS_Store
+Thumbs.db

@@ -1,3 +1,4 @@
+// ndnm-core/src/server.rs
 use crate::{AppError, Node};
 use axum::{
     extract::State,
@@ -60,6 +61,7 @@ where
     N::Output: Serialize + Send + 'static,
 {
     node.validate(&input)?;
-    let out = node.process(input)?;
+    // Corrigido: Agora usamos .await para chamar a função assíncrona.
+    let out = node.process(input).await?;
     Ok((StatusCode::OK, Json(out)))
 }

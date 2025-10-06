@@ -1,20 +1,19 @@
-# ndnm-core/Cargo.toml
+# node-load-checkpoint/Cargo.toml
 [package]
-name = "ndnm-core"
+name = "node-load-checkpoint"
 version = "0.1.0"
 edition = "2021"
+default-run = "node-load-checkpoint"
 
-# Dependências do core
 [dependencies]
-axum = "0.7"
-tokio = { version = "1", features = ["full"] }
+ndnm-core = { path = "../ndnm-core" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-thiserror = "1"
 clap = { version = "4.5", features = ["derive"] }
-async-trait = "0.1" # <-- A peça que faltava!
+tokio = { version = "1", features = ["full"] }
+# A biblioteca mágica para ler checkpoints!
+safetensors = "0.4.5"
 
-# Dependências apenas para os testes
 [dev-dependencies]
 axum = "0.7"
 tower = { version = "0.4", features = ["util"] }

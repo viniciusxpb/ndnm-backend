@@ -1,24 +1,23 @@
 // node-subtract/src/main.rs
 mod domain;
 
-use ndnm_core::{AppError, Node};
+use ndnm_core::{async_trait, AppError, Node};
 use serde::{Deserialize, Serialize};
 
-/// DTOs: Estruturas de dados para entrada e saída.
 #[derive(Debug, Deserialize)]
-pub struct Input { // Adicionado 'pub'
+pub struct Input {
     variables: Vec<i64>,
 }
 
 #[derive(Debug, Serialize)]
-pub struct Output { // Adicionado 'pub'
+pub struct Output {
     response: i64,
 }
 
-/// Implementação do Node para "subtract"
 #[derive(Default)]
-pub struct SubtractNode; // Adicionado 'pub'
+pub struct SubtractNode;
 
+#[async_trait] // <-- Adicionado
 impl Node for SubtractNode {
     type Input = Input;
     type Output = Output;
@@ -33,13 +32,12 @@ impl Node for SubtractNode {
         Ok(())
     }
 
-    fn process(&self, input: Self::Input) -> Result<Self::Output, AppError> {
+    async fn process(&self, input: Self::Input) -> Result<Self::Output, AppError> { // <-- Adicionado async
         let total = domain::subtract_all(&input.variables);
         Ok(Output { response: total })
     }
 }
 
-/// Ponto de entrada do programa.
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     ndnm_core::run_node(

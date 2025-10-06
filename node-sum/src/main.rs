@@ -1,24 +1,23 @@
 // node-sum/src/main.rs
 mod domain;
 
-use ndnm_core::{AppError, Node};
+use ndnm_core::{async_trait, AppError, Node};
 use serde::{Deserialize, Serialize};
 
-/// DTOs: Estruturas de dados para entrada e saída.
 #[derive(Debug, Deserialize)]
-pub struct Input { // Adicionado 'pub'
+pub struct Input {
     variables: Vec<i64>,
 }
 
 #[derive(Debug, Serialize)]
-pub struct Output { // Adicionado 'pub'
+pub struct Output {
     response: i64,
 }
 
-/// Implementação do Node para "sum"
 #[derive(Default)]
-pub struct SumNode; // Adicionado 'pub'
+pub struct SumNode;
 
+#[async_trait] // <-- Adicionado
 impl Node for SumNode {
     type Input = Input;
     type Output = Output;
@@ -33,13 +32,12 @@ impl Node for SumNode {
         Ok(())
     }
 
-    fn process(&self, input: Self::Input) -> Result<Self::Output, AppError> {
+    async fn process(&self, input: Self::Input) -> Result<Self::Output, AppError> { // <-- Adicionado async
         let total = domain::sum_all(&input.variables);
         Ok(Output { response: total })
     }
 }
 
-/// Ponto de entrada do programa.
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     ndnm_core::run_node(

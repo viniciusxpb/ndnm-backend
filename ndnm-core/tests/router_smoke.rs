@@ -1,8 +1,8 @@
 // ndnm-core/tests/router_smoke.rs
 use axum::{body::Body, http::{Request, StatusCode}};
-use ndnm_core::{self as core, AppError, Node};
+// Adicionamos a importação do async_trait
+use ndnm_core::{self as core, async_trait, AppError, Node};
 use serde::{Deserialize, Serialize};
-// Corrigido: O trait `ServiceExt` é importado diretamente de `tower`.
 use tower::ServiceExt;
 
 // Node de teste bem simples
@@ -12,10 +12,10 @@ struct DummyNode;
 #[derive(Debug, Deserialize)]
 struct In { x: i64, y: i64 }
 
-// Corrigido: Adicionado `Deserialize` para que possamos ler a resposta JSON.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 struct Out { sum: i64 }
 
+#[async_trait] // <-- Adicionado
 impl Node for DummyNode {
     type Input = In;
     type Output = Out;
@@ -27,7 +27,8 @@ impl Node for DummyNode {
         Ok(())
     }
 
-    fn process(&self, input: Self::Input) -> Result<Self::Output, AppError> {
+    // Adicionado `async`
+    async fn process(&self, input: Self::Input) -> Result<Self::Output, AppError> {
         Ok(Out { sum: input.x + input.y })
     }
 }
@@ -73,7 +74,6 @@ async fn run_ok() {
 async fn run_bad_request() {
     let app = core::router(DummyNode::default());
 
-    // dispara a validação (x=y=0)
     let body = serde_json::to_vec(&serde_json::json!({"x": 0, "y": 0})).unwrap();
     let req = Request::builder()
         .method("POST")
@@ -88,7 +88,6 @@ async fn run_bad_request() {
     let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
     let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
 
-    // confere envelope de erro do AppError::bad(...)
     assert_eq!(
         v,
         serde_json::json!({
