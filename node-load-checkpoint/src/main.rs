@@ -10,15 +10,39 @@ pub struct Input {
     file_path: String,
 }
 
-#[derive(Debug, Serialize)]
+// Adicionamos um Enum para representar os tipos de modelo
+#[derive(Debug, Serialize, Default, PartialEq)]
+pub enum ModelType {
+    #[default]
+    Unknown,
+    Checkpoint,
+    Lora,
+    TextualInversion,
+}
+
+#[derive(Debug, Serialize, Default)]
 pub struct Output {
     file_path: String,
-    model_tensor_count: usize,
-    clip_tensor_count: usize,
-    vae_tensor_count: usize,
+    model_type: ModelType,
+    tensor_count: usize,
+    // Estes campos agora são opcionais, pois só se aplicam a Checkpoints
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     model_keys_preview: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     clip_keys_preview: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     vae_keys_preview: Vec<String>,
+    #[serde(skip_serializing_if = "is_zero")]
+    model_tensor_count: usize,
+    #[serde(skip_serializing_if = "is_zero")]
+    clip_tensor_count: usize,
+    #[serde(skip_serializing_if = "is_zero")]
+    vae_tensor_count: usize,
+}
+
+// Função auxiliar para o serde
+fn is_zero(num: &usize) -> bool {
+    *num == 0
 }
 
 #[derive(Default)]
