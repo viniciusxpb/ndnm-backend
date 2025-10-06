@@ -1,0 +1,13 @@
+# C:/Projetos/ndnm/ndnm-backend/node-clip-text-encode-py/requirements.txt
+
+# O nosso "Axum" do Python, super rápido e moderno
+fastapi
+
+# O servidor que vai rodar nossa aplicação FastAPI
+uvicorn
+
+# A biblioteca da Hugging Face que faz a mágica de verdade
+transformers
+
+# A base de tudo no mundo de IA em Python
+torch
