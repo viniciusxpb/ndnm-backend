@@ -1,4 +1,4 @@
-# .gitignore
+# C:/Projetos/ndnm/ndnm-backend/.gitignore
 
 # Rust/Cargo build artifacts
 /target
@@ -24,3 +24,14 @@ Cargo.lock
 # Arquivos de sistema operacional
 .DS_Store
 Thumbs.db
+
+# --- Python Stuff (Nossa nova seção mágica!) ---
+# Ignora todos os ambientes virtuais, não importa o nome
+.venv/
+*.venv/
+
+# Ignora os arquivos de cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
