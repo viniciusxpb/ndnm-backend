@@ -1,5 +1,10 @@
 # Cargo.toml (na raiz do projeto)
 [workspace]
-# Corrigido: Removido "node-http-get" e adicionado o "node-load-checkpoint" que você pediu
-members = ["ndnm-core", "node-sum", "node-subtract", "node-load-checkpoint"]
+members = [
+    "ndnm-core",
+    "node-sum",
+    "node-subtract",
+    "node-load-checkpoint",
+    "node-empty-latent-image",
+]
 resolver = "2"

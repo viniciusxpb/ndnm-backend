@@ -1,0 +1,12 @@
+# node-empty-latent-image/.cargo/config.toml
+[build]
+rustflags = ["-C", "target-cpu=native"]
+
+[net]
+git-fetch-with-cli = true
+
+[target.'cfg(all(target_os = "linux", target_arch = "x86_64"))']
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+[target.'cfg(target_os = "macos")']
+rustflags = ["-C", "link-arg=-fuse-ld=lld", "-C", "split-debuginfo=unpacked"]

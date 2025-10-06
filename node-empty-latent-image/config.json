@@ -1,0 +1,8 @@
+{
+  "port": 3005,
+  "name": "node-empty-latent-image",
+  "description": "Node that creates a blank 'canvas' (latent image) for KSampler.",
+  "version": "0.1.0",
+  "max_width": 16384,
+  "max_height": 16384
+}
