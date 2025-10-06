@@ -1,4 +1,4 @@
-// node-empty-latent-image/src/main.rs
+// C:/Projetos/ndnm/ndnm-backend/node-empty-latent-image/src/main.rs
 mod domain;
 
 use ndnm_core::{async_trait, AppError, Node};
@@ -45,7 +45,21 @@ impl Node for EmptyLatentImageNode {
     }
 
     async fn process(&self, input: Self::Input) -> Result<Self::Output, AppError> {
-        domain::create_empty_latent(&input)
+        // 1. Desempacota os dados do Input
+        let (latent_width, latent_height, tensor_size) =
+            domain::create_empty_latent(input.width, input.height, input.batch_size)?;
+
+        // 2. Monta o Output com a resposta
+        Ok(Output {
+            status: "Empty Latent Created".to_string(),
+            width: input.width,
+            height: input.height,
+            batch_size: input.batch_size,
+            latent_width,
+            latent_height,
+            tensor_size,
+            data_type: "f32".to_string(),
+        })
     }
 }
 
@@ -56,5 +70,6 @@ async fn main() -> Result<(), AppError> {
         "node-empty-latent-image",
         "Node that creates a blank 'canvas' (latent image) for KSampler.",
         env!("CARGO_MANIFEST_DIR"),
-    ).await
+    )
+    .await
 }
