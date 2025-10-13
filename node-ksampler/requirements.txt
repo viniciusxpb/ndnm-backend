@@ -1,0 +1,11 @@
+# node-ksampler/requirements.txt
+
+# O nosso "Axum" do Python, super rápido e moderno
+fastapi
+
+# O servidor que vai rodar nossa aplicação FastAPI
+uvicorn
+
+# A biblioteca que contém os modelos e o Sampler (K-Sampler)
+torch
+diffusers

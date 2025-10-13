@@ -6,5 +6,6 @@ members = [
     "node-subtract",
     "node-load-checkpoint",
     "node-empty-latent-image",
+    "node-ksampler",
 ]
 resolver = "2"
