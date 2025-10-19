@@ -1,0 +1,28 @@
+{
+  "edges": [],
+  "name": "workspace-1",
+  "nodes": [
+    {
+      "data": {
+        "input_fields": [
+          {
+            "name": "value",
+            "type": "text"
+          }
+        ],
+        "inputsCount": 1,
+        "inputsMode": 0,
+        "label": "🔢 Valor Fixo",
+        "outputsCount": 1,
+        "outputsMode": "n",
+        "value": "512"
+      },
+      "id": "n1",
+      "position": {
+        "x": 316.625,
+        "y": 456.5
+      },
+      "type": "fixedValue"
+    }
+  ]
+}

@@ -1,22 +1,24 @@
+// ndnm-brazil/src/main.rs
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
-        State,
+        Path, State,
     },
     http::StatusCode,
     response::IntoResponse,
-    routing::get,
+    routing::{get, post},
     Router,
 };
 use clap::Parser;
 use futures_util::{stream::StreamExt, sink::SinkExt};
 use ndnm_core::{AppError, load_config};
-use std::{net::SocketAddr, sync::Arc};
+use std::{fs, net::SocketAddr, path::Path as StdPath, sync::Arc};
 use tokio::sync::broadcast;
 use chrono::Utc;
 use serde::Serialize;
 use serde_json::{json, Value};
 use walkdir::WalkDir;
+use tower_http::cors::CorsLayer;
 
 #[derive(Serialize, Debug, Clone)]
 struct NodeTypeInfo {
@@ -98,6 +100,67 @@ fn discover_nodes() -> Vec<NodeTypeInfo> {
     discovered_nodes
 }
 
+async fn save_workspace(
+    State(_state): State<Arc<AppState>>,
+    axum::extract::Json(payload): axum::extract::Json<Value>,
+) -> impl IntoResponse {
+    let workspace_name = payload.get("name").and_then(|v| v.as_str());
+    if workspace_name.is_none() {
+        return (StatusCode::BAD_REQUEST, "Missing workspace name").into_response();
+    }
+    
+    let workspace_name = workspace_name.unwrap();
+    let workspace_dir = StdPath::new("workspaces");
+    
+    if !workspace_dir.exists() {
+        if let Err(e) = fs::create_dir_all(workspace_dir) {
+            println!("{} | 🔴 Erro ao criar pasta workspaces: {}", Utc::now().to_rfc3339(), e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, format!("Error: {}", e)).into_response();
+        }
+    }
+    
+    let file_path = workspace_dir.join(format!("{}.json", workspace_name));
+    
+    match fs::write(&file_path, serde_json::to_string_pretty(&payload).unwrap_or_default()) {
+        Ok(_) => {
+            println!("{} | 💾 [Workspace] '{}' salvo em {:?}", 
+                Utc::now().to_rfc3339(), workspace_name, file_path);
+            (StatusCode::OK, axum::Json(json!({"status": "saved"}))).into_response()
+        }
+        Err(e) => {
+            println!("{} | 🔴 [Workspace] Erro ao salvar: {}", Utc::now().to_rfc3339(), e);
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Error: {}", e)).into_response()
+        }
+    }
+}
+
+async fn load_workspace(
+    State(_state): State<Arc<AppState>>,
+    Path(name): Path<String>,
+) -> impl IntoResponse {
+    let workspace_dir = StdPath::new("workspaces");
+    let file_path = workspace_dir.join(format!("{}.json", name));
+    
+    match fs::read_to_string(&file_path) {
+        Ok(content) => {
+            match serde_json::from_str::<Value>(&content) {
+                Ok(data) => {
+                    println!("{} | 📂 [Workspace] '{}' carregado", Utc::now().to_rfc3339(), name);
+                    (StatusCode::OK, axum::Json(data)).into_response()
+                }
+                Err(e) => {
+                    println!("{} | 🔴 [Workspace] Erro ao parsear JSON: {}", Utc::now().to_rfc3339(), e);
+                    (StatusCode::BAD_REQUEST, format!("Invalid JSON: {}", e)).into_response()
+                }
+            }
+        }
+        Err(e) => {
+            println!("{} | 🔴 [Workspace] Não encontrado: {}", Utc::now().to_rfc3339(), e);
+            (StatusCode::NOT_FOUND, format!("Workspace not found: {}", e)).into_response()
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     let args = Cli::parse();
@@ -109,10 +172,17 @@ async fn main() -> Result<(), AppError> {
     println!("{} | 🟢 [WS Brazil] Nodes descobertos (final): {:?}", Utc::now().to_rfc3339(), discovered_nodes.iter().map(|n| &n.r#type).collect::<Vec<_>>());
     let (tx, _) = broadcast::channel(100);
     let app_state = Arc::new(AppState { tx, known_nodes: discovered_nodes });
+    
+    let cors = CorsLayer::permissive();
+    
     let app = Router::new()
         .route("/health", get(health_handler))
         .route("/ws", get(ws_handler))
-        .with_state(app_state);
+        .route("/workspace/save", post(save_workspace))
+        .route("/workspace/load/:name", get(load_workspace))
+        .with_state(app_state)
+        .layer(cors);
+    
     let addr = SocketAddr::from(([0, 0, 0, 0], brazil_config.port));
     println!("{} | 🟢 [WS Brazil] ndnm-brazil ouvindo em {}", Utc::now().to_rfc3339(), addr);
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
