@@ -992,6 +992,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "node-fixed-value"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "clap",
+ "ndnm-core",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower 0.4.13",
+]
+
+[[package]]
 name = "node-list-directory"
 version = "0.1.0"
 dependencies = [

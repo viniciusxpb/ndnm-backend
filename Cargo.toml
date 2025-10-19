@@ -8,5 +8,6 @@ members = [
     "node-empty-latent-image",
     "node-list-directory",
     "ndnm-brazil",
+    "node-fixed-value",
 ]
 resolver = "2"

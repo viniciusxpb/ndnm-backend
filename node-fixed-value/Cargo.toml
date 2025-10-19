@@ -1,0 +1,17 @@
+# node-fixed-value/Cargo.toml
+[package]
+name = "node-fixed-value"
+version = "0.1.0"
+edition = "2021"
+default-run = "node-fixed-value"
+
+[dependencies]
+ndnm-core = { path = "../ndnm-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+clap = { version = "4.5", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+
+[dev-dependencies]
+axum = "0.7"
+tower = { version = "0.4", features = ["util"] }

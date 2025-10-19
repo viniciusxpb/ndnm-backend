@@ -1,0 +1,7 @@
+# node-fixed-value/config.yaml
+port: 3010 # Escolhe uma porta nova
+label: "🔢 Valor Fixo"
+node_type: "fixedValue"
+inputs_mode: "0"          # Sem entradas de fluxo, o valor vem do input de texto
+outputs_mode: "n"         # Saídas dinâmicas!
+initial_outputs_count: 1 # Começa com uma saída
