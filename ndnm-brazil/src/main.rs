@@ -12,19 +12,13 @@ use axum::{
 };
 use clap::Parser;
 use futures_util::{sink::SinkExt, stream::StreamExt};
-// --- CORREÇÃO AQUI ---
-// Removemos `NodeConfig` daqui, pois `load_config` já a retorna.
 use ndnm_core::{AppError, load_config};
-// --- FIM DA CORREÇÃO ---
-// --- CORREÇÃO AQUI ---
-// Removemos `path::PathBuf` daqui, pois só é usado em `discover_nodes`
 use std::{net::SocketAddr, sync::Arc};
-// --- FIM DA CORREÇÃO ---
 use tokio::sync::broadcast;
 use chrono::Utc;
 use serde::Serialize;
 use serde_json::json;
-use walkdir::WalkDir; // Este use está correto e é necessário
+use walkdir::WalkDir;
 
 // --- Estruturas de Comunicação ---
 #[derive(Serialize, Debug, Clone)]
@@ -61,58 +55,77 @@ struct AppState {
 
 // --- Função Auxiliar: Descobrir Nodes ---
 fn discover_nodes() -> Vec<NodeTypeInfo> {
-    // Importamos PathBuf aqui dentro, onde é usado
     use std::path::{Path, PathBuf};
 
     let mut discovered_nodes = Vec::new();
     let current_dir = std::env::current_dir().expect("Não consegui ler o diretório atual");
-    let workspace_dir = current_dir.parent().unwrap_or(&current_dir);
+    println!("{} | 🟡 [Discovery] Diretório atual (base da busca): {}", Utc::now().to_rfc3339(), current_dir.display());
 
-    println!("{} | 🟡 [WS Brazil] Procurando nodes em: {}", Utc::now().to_rfc3339(), workspace_dir.display());
+    // --- CORREÇÃO AQUI ---
+    // A pasta base da busca é o diretório atual (ndnm-backend), não o pai.
+    let workspace_dir = &current_dir;
+    // --- FIM DA CORREÇÃO ---
 
+    println!("{} | 🟡 [Discovery] Procurando nodes em: {}", Utc::now().to_rfc3339(), workspace_dir.display());
+
+    // Usa walkdir para iterar sobre o diretório do workspace, mas só 1 nível abaixo
     for entry in WalkDir::new(workspace_dir).min_depth(1).max_depth(1).into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
+        println!("{} | 🟡 [Discovery] Verificando entrada: {}", Utc::now().to_rfc3339(), path.display());
+
         if path.is_dir() {
             if let Some(dir_name) = path.file_name().and_then(|n| n.to_str()) {
-                if dir_name.starts_with("node-") {
-                    println!("{} | 🟡 [WS Brazil] Encontrei potencial node: {}", Utc::now().to_rfc3339(), dir_name);
-                    let config_path = path.join("config.yaml");
-                     match load_config(config_path.to_str().unwrap_or(""), path.to_str().unwrap_or("")) {
-                        Ok((node_config, _)) => { // node_config aqui é do tipo ndnm_core::NodeConfig
-                            println!("{} | 🟢 [WS Brazil]  -> Config carregado para '{}'", Utc::now().to_rfc3339(), dir_name);
+                // Ignora pastas comuns que não são nodes
+                if dir_name == "target" || dir_name == "src" || dir_name.starts_with('.') || dir_name == "ndnm-core" || dir_name == "ndnm-brazil" {
+                     println!("{} | 🟡 [Discovery]  -> É diretório: {} (Ignorando pasta conhecida)", Utc::now().to_rfc3339(), dir_name);
+                     continue; // Pula pra próxima entrada
+                }
 
-                            let node_type = node_config.node_type
-                                .clone()
-                                .unwrap_or_else(|| dir_name.trim_start_matches("node-").to_string());
+                println!("{} | 🟡 [Discovery]  -> É diretório: {}", Utc::now().to_rfc3339(), dir_name);
+                let config_path = path.join("config.yaml");
+                println!("{} | 🟡 [Discovery]  -> Verificando existência de: {}", Utc::now().to_rfc3339(), config_path.display());
 
-                            let label = node_config.label.clone().unwrap_or_else(|| node_type.clone());
+                match load_config(config_path.to_str().unwrap_or(""), path.to_str().unwrap_or("")) {
+                    Ok((node_config, found_path)) => {
+                        println!("{} | 🟢 [Discovery]  -> Config válido encontrado em '{}'! Adicionando node '{}'", Utc::now().to_rfc3339(), found_path.display(), dir_name);
 
-                            let default_data = json!({
-                                "label": label,
-                                "inputsMode": node_config.inputs_mode.unwrap_or_else(|| "1".to_string()),
-                                "inputsCount": node_config.initial_inputs_count.unwrap_or(1),
-                                "outputsMode": node_config.outputs_mode.unwrap_or_else(|| "1".to_string()),
-                                "outputsCount": node_config.initial_outputs_count.unwrap_or(1),
-                            });
+                        let node_type = node_config.node_type
+                            .clone()
+                            .unwrap_or_else(|| dir_name.trim_start_matches("node-").to_string());
 
-                            discovered_nodes.push(NodeTypeInfo {
-                                r#type: node_type,
-                                label: label,
-                                default_data,
-                            });
-                        }
-                        Err(e) => {
-                             println!("{} | 🔴 [WS Brazil]  -> Falha ao carregar config para '{}': {}", Utc::now().to_rfc3339(), dir_name, e);
-                        }
+                        let label = node_config.label.clone().unwrap_or_else(|| node_type.clone());
+
+                        let default_data = json!({
+                            "label": label,
+                            "inputsMode": node_config.inputs_mode.unwrap_or_else(|| "1".to_string()),
+                            "inputsCount": node_config.initial_inputs_count.unwrap_or(1),
+                            "outputsMode": node_config.outputs_mode.unwrap_or_else(|| "1".to_string()),
+                            "outputsCount": node_config.initial_outputs_count.unwrap_or(1),
+                        });
+
+                        discovered_nodes.push(NodeTypeInfo {
+                            r#type: node_type,
+                            label: label,
+                            default_data,
+                        });
+                    }
+                    Err(_) => {
+                         println!("{} | 🟡 [Discovery]  -> Sem config.yaml válido encontrado para '{}'. Ignorando.", Utc::now().to_rfc3339(), dir_name);
                     }
                 }
+            } else {
+                 println!("{} | 🔴 [Discovery]  -> Falha ao obter nome do diretório.", Utc::now().to_rfc3339());
             }
+        } else {
+             println!("{} | 🟡 [Discovery]  -> Não é diretório, ignorando.", Utc::now().to_rfc3339());
         }
     }
 
+    println!("{} | 🟡 [Discovery] Fim da busca. Nodes válidos encontrados: {}", Utc::now().to_rfc3339(), discovered_nodes.len());
     discovered_nodes.sort_by(|a, b| a.label.cmp(&b.label));
     discovered_nodes
 }
+
 
 // --- Lógica Principal ---
 #[tokio::main]
@@ -137,7 +150,7 @@ async fn main() -> Result<(), AppError> {
     }
 
     let discovered_nodes = discover_nodes();
-    println!("{} | 🟢 [WS Brazil] Nodes descobertos: {:?}", Utc::now().to_rfc3339(), discovered_nodes.iter().map(|n| &n.r#type).collect::<Vec<_>>());
+    println!("{} | 🟢 [WS Brazil] Nodes descobertos (final): {:?}", Utc::now().to_rfc3339(), discovered_nodes.iter().map(|n| &n.r#type).collect::<Vec<_>>());
 
     let (tx, _) = broadcast::channel(100);
     let app_state = Arc::new(AppState { tx, known_nodes: discovered_nodes });
@@ -157,7 +170,8 @@ async fn main() -> Result<(), AppError> {
     Ok(())
 }
 
-// --- Handlers ---
+// --- Handlers (sem mudanças) ---
+// (O código dos handlers health_handler, ws_handler, handle_socket permanece o mesmo)
 async fn health_handler() -> impl IntoResponse {
     (StatusCode::OK, "Brazil is alive!")
 }
@@ -181,7 +195,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                  println!("{} | 🔴 [WS Brazil] Falha ao enviar NODE_CONFIG inicial. Cliente desconectou cedo?", Utc::now().to_rfc3339());
                  return;
             }
-             println!("{} | 🟢 [WS Brazil] Enviou NODE_CONFIG inicial.", Utc::now().to_rfc3339());
+             println!("{} | 🟢 [WS Brazil] Enviou NODE_CONFIG inicial ({} nodes).", Utc::now().to_rfc3339(), state.known_nodes.len());
         }
         Err(e) => {
              println!("{} | 🔴 [WS Brazil] Erro ao serializar NODE_CONFIG: {}", Utc::now().to_rfc3339(), e);
@@ -190,7 +204,6 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     }
 
     let mut rx = state.tx.subscribe();
-    // Prefixamos com _ pois não usamos diretamente no loop de envio
     let _state_clone_send = Arc::clone(&state);
     let mut send_task = tokio::spawn(async move {
         while let Ok(msg_from_broadcast) = rx.recv().await {
