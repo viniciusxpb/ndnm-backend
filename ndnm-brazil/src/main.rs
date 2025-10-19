@@ -48,7 +48,7 @@ async fn main() -> Result<(), AppError> {
     // Usamos CoreConfig que importamos do ndnm_core
 
     println!(
-        "ndnm-brazil (Maestro) usando config: {}",
+        "🟢 [WS Brazil] ndnm-brazil (Maestro) usando config: {}",
         config_path.display()
     );
 
@@ -69,7 +69,7 @@ async fn main() -> Result<(), AppError> {
 
     // 4. Iniciar o servidor (continua igual)
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
-    println!("ndnm-brazil ouvindo em {}", addr);
+    println!("🟢 [WS Brazil] ndnm-brazil ouvindo em {}", addr);
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app.into_make_service())
         .await
@@ -90,13 +90,13 @@ async fn ws_handler(
     ws: WebSocketUpgrade,
     State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
-    println!("Novo cliente WebSocket conectando...");
+    println!("🟡 [WS Brazil] Novo cliente WebSocket tentando conectar...");
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
 
 // Função que gerencia uma conexão WebSocket individual
 async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
-    println!("Cliente WebSocket conectado!");
+    println!("🟢 [WS Brazil] Cliente WebSocket CONECTADO!");
     let (mut sender, mut receiver) = socket.split();
 
     let mut rx = state.tx.subscribe();
@@ -105,6 +105,8 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     let mut send_task = tokio::spawn(async move {
         while let Ok(msg) = rx.recv().await {
             if sender.send(Message::Text(msg)).await.is_err() {
+                // LOG LENDÁRIO AQUI
+                println!("🔴 [WS Brazil] Falha ao enviar msg para o cliente (loop de envio). Cliente provavelmente desconectou.");
                 break;
             }
         }
@@ -116,16 +118,24 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
         while let Some(Ok(msg)) = receiver.next().await {
             match msg {
                 Message::Text(text) => {
-                    println!("Recebido do cliente: {}", text);
+                    // LOG LENDÁRIO AQUI
+                    println!("🟢 [WS Brazil] Recebido do cliente: {}", text);
                     // TODO: Implementar lógica de parse/execução do grafo
 
                     let response = format!("Brazil recebeu: {}", text);
+                    // LOG LENDÁRIO AQUI
+                    println!("🟢 [WS Brazil] Enviando resposta: {}", response);
                     if tx.send(response).is_err() {
                         // Ninguém ouvindo
                     }
                 }
-                Message::Close(_) => {
-                    println!("Cliente desconectou.");
+                Message::Close(close_frame) => {
+                    // LOG LENDÁRIO AQUI
+                    if let Some(frame) = close_frame {
+                        println!("🟡 [WS Brazil] Cliente desconectou com frame: code={}, reason={}", frame.code, frame.reason);
+                    } else {
+                        println!("🟡 [WS Brazil] Cliente desconectou (sem frame).");
+                    }
                     break;
                 }
                 _ => {}
@@ -133,10 +143,19 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
         }
     });
 
+    // LOG LENDÁRIO AQUI
     tokio::select! {
-        _ = (&mut send_task) => recv_task.abort(),
-        _ = (&mut recv_task) => send_task.abort(),
+        res = (&mut send_task) => {
+            println!("🟡 [WS Brazil] Task de ENVIO finalizada.");
+            if let Err(e) = res { println!("🔴 [WS Brazil] Erro na task de envio: {:?}", e); }
+            recv_task.abort();
+        },
+        res = (&mut recv_task) => {
+            println!("🟡 [WS Brazil] Task de RECEBIMENTO finalizada.");
+            if let Err(e) = res { println!("🔴 [WS Brazil] Erro na task de recebimento: {:?}", e); }
+            send_task.abort();
+        },
     };
 
-    println!("Conexão WebSocket finalizada.");
+    println!("🟡 [WS Brazil] Conexão WebSocket finalizada.");
 }
