@@ -19,7 +19,6 @@ struct Cli {
 }
 
 /// A função principal que inicializa e serve um Node.
-// Corrigido: Adicionado o parâmetro `node_manifest_dir` para resolver o caminho do config.json corretamente.
 pub async fn run_node<N>(node: N, name: &'static str, about: &'static str, node_manifest_dir: &'static str) -> Result<(), AppError>
 where
     N: Node + Send + Sync + 'static,
@@ -35,8 +34,7 @@ where
     let args = Cli::from_arg_matches(&matches)
         .map_err(|e| AppError::bad(format!("erro ao parsear argumentos: {}", e)))?;
 
-    // Corrigido: Passa o diretório correto do node para a função de carregar o config.
-    let (mut cfg, cfg_path) = load_config(&args.config, node_manifest_dir)?;
+    let (mut cfg, cfg_path) = load_config(&args.config, node_manifest_dir)?; // <--- Chamada aqui
     println!("usando config: {}", cfg_path.display());
 
     if let Some(p) = args.port {
@@ -47,6 +45,7 @@ where
     crate::server::serve(ServerOpts { port: cfg.port }, node).await
 }
 
+// Função interna que lê e parseia o config
 fn try_read_config(path: &Path) -> Result<Config, AppError> {
     let data = fs::read_to_string(path)
         .map_err(|e| AppError::bad(format!("não consegui ler {:?}: {}", path, e)))?;
@@ -54,8 +53,9 @@ fn try_read_config(path: &Path) -> Result<Config, AppError> {
         .map_err(|e| AppError::bad(format!("config inválido em {:?}: {}", path, e)))
 }
 
-// Corrigido: Recebe o `node_manifest_dir` para usar como o caminho de fallback correto.
-fn load_config(cli_path: &str, node_manifest_dir: &str) -> Result<(Config, PathBuf), AppError> {
+// --- MUDANÇA AQUI ---
+/// Carrega a configuração, procurando no path do CLI e como fallback no diretório do manifesto do node.
+pub fn load_config(cli_path: &str, node_manifest_dir: &str) -> Result<(Config, PathBuf), AppError> { // <--- Adicionado `pub`
     let p1 = PathBuf::from(cli_path);
     if p1.exists() {
         let cfg = try_read_config(&p1)?;

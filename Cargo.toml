@@ -7,5 +7,6 @@ members = [
     "node-load-checkpoint",
     "node-empty-latent-image",
     "node-list-directory",
+    "ndnm-brazil",
 ]
 resolver = "2"

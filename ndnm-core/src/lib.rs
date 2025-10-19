@@ -7,10 +7,13 @@ mod config;
 mod runner;
 
 pub use async_trait::async_trait;
-pub use config::Config;
+// --- MUDANÇA AQUI ---
+pub use config::Config; // <- Já tinha
+pub use runner::load_config; // <--- Adiciona essa linha
+// --- FIM DA MUDANÇA ---
 pub use error::AppError;
 pub use server::{router, serve, ServerOpts};
-pub use runner::run_node;
+pub use runner::run_node; // <- Já tinha
 
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -24,6 +27,5 @@ pub trait Node: Send + Sync + 'static {
     fn validate(&self, _input: &Self::Input) -> Result<(), AppError> { Ok(()) }
 
     /// Regra de negócio do node. Agora é assíncrona.
-    // Corrigido: A sintaxe correta é Self::Input
     async fn process(&self, input: Self::Input) -> Result<Self::Output, AppError>;
 }
