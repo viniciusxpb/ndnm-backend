@@ -1,7 +1,5 @@
-// Adiciona Serialize à lista de derives
 use serde::{Deserialize, Serialize};
 
-// Marca a struct como `pub` e adiciona `Serialize`
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct InputFieldConfig {
     pub name: String,

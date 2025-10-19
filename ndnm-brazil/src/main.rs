@@ -10,11 +10,9 @@ use axum::{
 };
 use clap::Parser;
 use futures_util::{stream::StreamExt, sink::SinkExt};
-// Remove NodeConfig daqui, pois só usamos InputFieldConfig diretamente
-use ndnm_core::{AppError, load_config, InputFieldConfig};
+use ndnm_core::{AppError, load_config};
 use std::{net::SocketAddr, sync::Arc};
-// Remove tokio::sync::broadcast daqui
-use tokio::sync::broadcast; // Mantem broadcast
+use tokio::sync::broadcast;
 use chrono::Utc;
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -51,7 +49,6 @@ struct AppState {
 }
 
 fn discover_nodes() -> Vec<NodeTypeInfo> {
-    // Remove imports locais não utilizados (Path, PathBuf)
     let mut discovered_nodes = Vec::new();
     let current_dir = std::env::current_dir().expect("Não consegui ler o diretório atual");
     let workspace_dir = &current_dir;
@@ -91,7 +88,7 @@ fn discover_nodes() -> Vec<NodeTypeInfo> {
                             default_data,
                         });
                     }
-                    Err(_) => { /* Ignora */ }
+                    Err(_) => { }
                 }
             }
         }
@@ -160,7 +157,7 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                     match serde_json::to_string(&echo_msg) {
                         Ok(json_str) => {
                             println!("{} | 🟢 [WS Brazil] Enviando ECHO via broadcast: {}", Utc::now().to_rfc3339(), json_str);
-                            if state_clone_recv.tx.send(json_str).is_err() { /* Aviso opcional */ }
+                            if state_clone_recv.tx.send(json_str).is_err() { }
                         }
                         Err(e) => { println!("{} | 🔴 [WS Brazil] Erro ao serializar ECHO: {}", Utc::now().to_rfc3339(), e); }
                     }

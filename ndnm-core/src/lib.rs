@@ -4,7 +4,6 @@ mod config;
 mod runner;
 
 pub use async_trait::async_trait;
-// Exporta InputFieldConfig junto com NodeConfig
 pub use config::{NodeConfig, InputFieldConfig};
 pub use runner::load_config;
 pub use error::AppError;
