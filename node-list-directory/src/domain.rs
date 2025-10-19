@@ -1,10 +1,13 @@
 // node-list-directory/src/domain.rs
 //! Regra de negócio: listar o conteúdo de um diretório.
 
+// Importa a bruxaria de datas
+use chrono::{DateTime, Utc};
 use ndnm_core::AppError;
 use serde::Serialize;
 use std::fs;
 use std::path::Path;
+use std::time::SystemTime; // A gente precisa disso pra converter
 
 /// Estrutura que representa uma entrada no diretório (arquivo ou pasta)
 #[derive(Debug, Serialize)]
@@ -12,6 +15,14 @@ pub struct DirectoryEntry {
     pub name: String,
     pub is_dir: bool,
     pub size_bytes: u64,
+
+    // --- NOSSOS NOVOS CAMPOS LENDÁRIOS ---
+    /// Se o arquivo/pasta é somente leitura
+    pub readonly: bool,
+    /// Data de modificação (formato ISO 8601 / UTC)
+    pub modified: DateTime<Utc>,
+    /// Data de criação (formato ISO 8601 / UTC)
+    pub created: DateTime<Utc>,
 }
 
 /// A função principal da nossa lógica de negócio.
@@ -51,13 +62,30 @@ pub fn list_directory(path_str: &str) -> Result<Vec<DirectoryEntry>, AppError> {
 
         let is_dir = metadata.is_dir();
         
-        // Se for diretório, tamanho é 0. Se for arquivo, pega o tamanho.
         let size_bytes = if is_dir { 0 } else { metadata.len() };
+
+        // --- PEGANDO AS INFOS NOVAS ---
+        let readonly = metadata.permissions().readonly();
+        
+        // Converte SystemTime (do Rust) para DateTime<Utc> (do Chrono)
+        // Se der erro (ex: sistema de arquivos maluco), a gente usa a data/hora de agora.
+        let modified: DateTime<Utc> = metadata.modified()
+            .unwrap_or_else(|_| SystemTime::now()) // Fallback
+            .into();
+        
+        let created: DateTime<Utc> = metadata.created()
+            .unwrap_or_else(|_| SystemTime::now()) // Fallback
+            .into();
+
 
         entries.push(DirectoryEntry {
             name: file_name,
             is_dir,
             size_bytes,
+            // --- ADICIONADO AQUI ---
+            readonly,
+            modified,
+            created,
         });
     }
 
@@ -91,7 +119,7 @@ mod tests {
 
     #[test]
     fn test_list_directory_ok() {
-        let dir = setup_test_dir("test_list_ok");
+        let dir = setup_test_dir("test_list_ok_v2"); // Nome novo pra não conflitar
         let mut entries = list_directory(&dir).unwrap();
 
         // Ordena pra garantir a ordem do teste
@@ -102,6 +130,12 @@ mod tests {
         assert_eq!(entries[0].name, "file.txt");
         assert_eq!(entries[0].is_dir, false);
         assert_eq!(entries[0].size_bytes, 5);
+        // Testa o campo novo (No Windows/Linux, recém-criado não é readonly)
+        assert_eq!(entries[0].readonly, false); 
+        // Testa se a data é válida (recente, +/- 5 seg)
+        let now = Utc::now();
+        assert!(entries[0].modified > (now - chrono::Duration::seconds(5)));
+        assert!(entries[0].modified < (now + chrono::Duration::seconds(5)));
         
         assert_eq!(entries[1].name, "subfolder");
         assert_eq!(entries[1].is_dir, true);
