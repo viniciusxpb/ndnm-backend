@@ -1,2 +1,8 @@
 # node-subtract/config.yaml
 port: 3001
+label: "➖ Subtrair"
+node_type: "subtract"
+inputs_mode: "n"
+initial_inputs_count: 1
+outputs_mode: "1"
+initial_outputs_count: 1

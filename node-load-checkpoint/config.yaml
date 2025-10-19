@@ -1,2 +1,6 @@
 # node-load-checkpoint/config.yaml
 port: 3003
+label: "💾 Carregar Checkpoint"
+node_type: "loadCheckpoint" # Assumindo um tipo pro front, podemos ajustar depois
+inputs_mode: "0" # Sem inputs de fluxo, talvez um campo no node pra escolher o arquivo
+outputs_mode: "1" # Saída com informações do checkpoint

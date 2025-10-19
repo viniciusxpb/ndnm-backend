@@ -1,9 +1,10 @@
 # node-empty-latent-image/config.yaml
-# Atenção: YAML é sensível à indentação!
 port: 3005
-# Mantive os outros campos que existiam no JSON original,
-# embora o ndnm-core atualmente só leia a porta.
-# Podemos decidir depois se esses campos extras serão úteis.
+label: "🔳 Imagem Latente Vazia"
+node_type: "emptyLatentImage"
+inputs_mode: "1" # Precisa de width/height/batch, talvez venham de outros nodes
+outputs_mode: "1" # Saída com o latent vazio (ou info sobre ele)
+# Os campos abaixo não são lidos pelo core atualmente, mas deixamos por histórico
 name: "node-empty-latent-image"
 description: "Node that creates a blank 'canvas' (latent image) for KSampler."
 version: "0.1.0"

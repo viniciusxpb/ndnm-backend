@@ -1,2 +1,6 @@
 # node-list-directory/config.yaml
 port: 3009
+label: "📂 Listar Diretório"
+node_type: "listDirectory"
+inputs_mode: "0" # Sem inputs de fluxo, path virá de um campo no node
+outputs_mode: "1" # Saída com a lista de arquivos/pastas

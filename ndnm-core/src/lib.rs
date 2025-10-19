@@ -7,13 +7,13 @@ mod config;
 mod runner;
 
 pub use async_trait::async_trait;
-// --- MUDANÇA AQUI ---
-pub use config::Config; // <- Já tinha
-pub use runner::load_config; // <--- Adiciona essa linha
-// --- FIM DA MUDANÇA ---
+// --- CORREÇÃO AQUI ---
+pub use config::NodeConfig; // <- Exporta a nova struct NodeConfig
+pub use runner::load_config; // <--- Exporta a função que a carrega
+// --- FIM DA CORREÇÃO ---
 pub use error::AppError;
 pub use server::{router, serve, ServerOpts};
-pub use runner::run_node; // <- Já tinha
+pub use runner::run_node;
 
 use serde::{de::DeserializeOwned, Serialize};
 

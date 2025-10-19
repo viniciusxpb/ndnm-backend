@@ -12,38 +12,38 @@ use axum::{
 };
 use clap::Parser;
 use futures_util::{sink::SinkExt, stream::StreamExt};
+// --- CORREÇÃO AQUI ---
+// Removemos `NodeConfig` daqui, pois `load_config` já a retorna.
 use ndnm_core::{AppError, load_config};
+// --- FIM DA CORREÇÃO ---
+// --- CORREÇÃO AQUI ---
+// Removemos `path::PathBuf` daqui, pois só é usado em `discover_nodes`
 use std::{net::SocketAddr, sync::Arc};
+// --- FIM DA CORREÇÃO ---
 use tokio::sync::broadcast;
 use chrono::Utc;
-
-// --- NOSSA NOVA BRUXARIA: Estruturas para Configuração Dinâmica ---
 use serde::Serialize;
-use serde_json::json; // Para criar o `default_data` facilmente
+use serde_json::json;
+use walkdir::WalkDir; // Este use está correto e é necessário
 
-/// Informação sobre um tipo de node disponível, enviada ao frontend.
+// --- Estruturas de Comunicação ---
 #[derive(Serialize, Debug, Clone)]
 struct NodeTypeInfo {
-    r#type: String, // Usamos `r#` porque `type` é palavra reservada
+    r#type: String,
     label: String,
-    // Usamos `serde_json::Value` para flexibilidade nos dados default
     default_data: serde_json::Value,
 }
 
-/// Mensagem enviada pelo WebSocket do Brazil para o Frontend
 #[derive(Serialize, Debug, Clone)]
-#[serde(tag = "type")] // Adiciona um campo "type" ao JSON final
+#[serde(tag = "type")]
 enum BrazilToFrontend {
-    #[serde(rename = "NODE_CONFIG")] // Nome do tipo no JSON
+    #[serde(rename = "NODE_CONFIG")]
     NodeConfig { payload: Vec<NodeTypeInfo> },
     #[serde(rename = "ECHO")]
     Echo { message: String },
-    // Adicionar outros tipos de mensagem aqui no futuro (ex: EXECUTION_RESULT)
 }
-// --- FIM DA BRUXARIA ---
 
-
-// --- Configuração ---
+// --- Configuração CLI ---
 #[derive(Parser, Debug)]
 struct Cli {
     #[arg(long, default_value = "config.yaml")]
@@ -52,20 +52,73 @@ struct Cli {
     port: Option<u16>,
 }
 
-// --- Estado Compartilhado (Adicionamos a lista de nodes) ---
+// --- Estado Compartilhado ---
 #[derive(Debug)]
 struct AppState {
     tx: broadcast::Sender<String>,
-    // Lista dos nodes que o Brazil conhece (será dinâmica no futuro)
     known_nodes: Vec<NodeTypeInfo>,
 }
 
-// --- Lógica Principal ---
+// --- Função Auxiliar: Descobrir Nodes ---
+fn discover_nodes() -> Vec<NodeTypeInfo> {
+    // Importamos PathBuf aqui dentro, onde é usado
+    use std::path::{Path, PathBuf};
 
+    let mut discovered_nodes = Vec::new();
+    let current_dir = std::env::current_dir().expect("Não consegui ler o diretório atual");
+    let workspace_dir = current_dir.parent().unwrap_or(&current_dir);
+
+    println!("{} | 🟡 [WS Brazil] Procurando nodes em: {}", Utc::now().to_rfc3339(), workspace_dir.display());
+
+    for entry in WalkDir::new(workspace_dir).min_depth(1).max_depth(1).into_iter().filter_map(|e| e.ok()) {
+        let path = entry.path();
+        if path.is_dir() {
+            if let Some(dir_name) = path.file_name().and_then(|n| n.to_str()) {
+                if dir_name.starts_with("node-") {
+                    println!("{} | 🟡 [WS Brazil] Encontrei potencial node: {}", Utc::now().to_rfc3339(), dir_name);
+                    let config_path = path.join("config.yaml");
+                     match load_config(config_path.to_str().unwrap_or(""), path.to_str().unwrap_or("")) {
+                        Ok((node_config, _)) => { // node_config aqui é do tipo ndnm_core::NodeConfig
+                            println!("{} | 🟢 [WS Brazil]  -> Config carregado para '{}'", Utc::now().to_rfc3339(), dir_name);
+
+                            let node_type = node_config.node_type
+                                .clone()
+                                .unwrap_or_else(|| dir_name.trim_start_matches("node-").to_string());
+
+                            let label = node_config.label.clone().unwrap_or_else(|| node_type.clone());
+
+                            let default_data = json!({
+                                "label": label,
+                                "inputsMode": node_config.inputs_mode.unwrap_or_else(|| "1".to_string()),
+                                "inputsCount": node_config.initial_inputs_count.unwrap_or(1),
+                                "outputsMode": node_config.outputs_mode.unwrap_or_else(|| "1".to_string()),
+                                "outputsCount": node_config.initial_outputs_count.unwrap_or(1),
+                            });
+
+                            discovered_nodes.push(NodeTypeInfo {
+                                r#type: node_type,
+                                label: label,
+                                default_data,
+                            });
+                        }
+                        Err(e) => {
+                             println!("{} | 🔴 [WS Brazil]  -> Falha ao carregar config para '{}': {}", Utc::now().to_rfc3339(), dir_name, e);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    discovered_nodes.sort_by(|a, b| a.label.cmp(&b.label));
+    discovered_nodes
+}
+
+// --- Lógica Principal ---
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     let args = Cli::parse();
-    let (mut config, config_path) = load_config(&args.config, env!("CARGO_MANIFEST_DIR"))?;
+    let (mut brazil_config, config_path) = load_config(&args.config, env!("CARGO_MANIFEST_DIR"))?;
 
     println!(
         "{} | 🟢 [WS Brazil] ndnm-brazil (Maestro) usando config: {}",
@@ -74,55 +127,27 @@ async fn main() -> Result<(), AppError> {
     );
 
     if let Some(p) = args.port {
-        config.port = p;
+        brazil_config.port = p;
+    }
+     if brazil_config.port == 0 {
+         return Err(AppError::bad(format!(
+            "Porta inválida ou não definida no config do Brazil: {}",
+            config_path.display()
+        )));
     }
 
-    // --- CRIA A LISTA DE NODES (HARDCODED POR AGORA) ---
-    let known_nodes = vec![
-        NodeTypeInfo {
-            r#type: "textUpdater".to_string(),
-            label: "📝 Texto".to_string(),
-            default_data: json!({ "label": "Novo texto" }),
-        },
-        NodeTypeInfo {
-            r#type: "add".to_string(),
-            label: "➕ Somar".to_string(),
-            default_data: json!({
-                "label": "➕ Somar",
-                "inputsMode": "n",
-                "inputsCount": 1,
-                "outputsMode": 1,
-                "outputsCount": 1
-            }),
-        },
-        NodeTypeInfo {
-            r#type: "subtract".to_string(),
-            label: "➖ Subtrair".to_string(),
-            default_data: json!({
-                "label": "➖ Subtrair",
-                "inputsMode": "n",
-                "inputsCount": 1,
-                "outputsMode": 1,
-                "outputsCount": 1
-            }),
-        },
-        // TODO: Adicionar outros nodes conhecidos aqui (list-directory, etc.)
-        // Futuramente, isso virá de um config ou service discovery
-    ];
-    println!("{} | 🟢 [WS Brazil] Nodes conhecidos: {:?}", Utc::now().to_rfc3339(), known_nodes.iter().map(|n| &n.r#type).collect::<Vec<_>>());
+    let discovered_nodes = discover_nodes();
+    println!("{} | 🟢 [WS Brazil] Nodes descobertos: {:?}", Utc::now().to_rfc3339(), discovered_nodes.iter().map(|n| &n.r#type).collect::<Vec<_>>());
 
-
-    // --- CRIA O ESTADO COMPARTILHADO ---
     let (tx, _) = broadcast::channel(100);
-    // Passa a lista de nodes para o estado
-    let app_state = Arc::new(AppState { tx, known_nodes });
+    let app_state = Arc::new(AppState { tx, known_nodes: discovered_nodes });
 
     let app = Router::new()
         .route("/health", get(health_handler))
         .route("/ws", get(ws_handler))
-        .with_state(app_state); // O estado agora inclui a lista de nodes
+        .with_state(app_state);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
+    let addr = SocketAddr::from(([0, 0, 0, 0], brazil_config.port));
     println!("{} | 🟢 [WS Brazil] ndnm-brazil ouvindo em {}", Utc::now().to_rfc3339(), addr);
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app.into_make_service())
@@ -133,80 +158,62 @@ async fn main() -> Result<(), AppError> {
 }
 
 // --- Handlers ---
-
 async fn health_handler() -> impl IntoResponse {
     (StatusCode::OK, "Brazil is alive!")
 }
 
 async fn ws_handler(
     ws: WebSocketUpgrade,
-    State(state): State<Arc<AppState>>, // O estado agora tem known_nodes
+    State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
     println!("{} | 🟡 [WS Brazil] Novo cliente WebSocket tentando conectar...", Utc::now().to_rfc3339());
-    ws.on_upgrade(|socket| handle_socket(socket, state)) // Passa o estado completo
+    ws.on_upgrade(|socket| handle_socket(socket, state))
 }
 
-// Função que gerencia uma conexão WebSocket individual
 async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
-    println!("{} | 🟢 [WS Brazil] Cliente WebSocket CONECTADO!", Utc::now().to_rfc3339());
+     println!("{} | 🟢 [WS Brazil] Cliente WebSocket CONECTADO!", Utc::now().to_rfc3339());
     let (mut sender, mut receiver) = socket.split();
 
-    // --- ENVIA A CONFIGURAÇÃO INICIAL DE NODES ---
     let config_msg = BrazilToFrontend::NodeConfig { payload: state.known_nodes.clone() };
     match serde_json::to_string(&config_msg) {
         Ok(json_str) => {
             if sender.send(Message::Text(json_str)).await.is_err() {
                  println!("{} | 🔴 [WS Brazil] Falha ao enviar NODE_CONFIG inicial. Cliente desconectou cedo?", Utc::now().to_rfc3339());
-                 return; // Aborta se não conseguir enviar a config inicial
+                 return;
             }
              println!("{} | 🟢 [WS Brazil] Enviou NODE_CONFIG inicial.", Utc::now().to_rfc3339());
         }
         Err(e) => {
              println!("{} | 🔴 [WS Brazil] Erro ao serializar NODE_CONFIG: {}", Utc::now().to_rfc3339(), e);
-             return; // Aborta se houver erro de serialização
+             return;
         }
     }
-    // --- FIM DO ENVIO INICIAL ---
-
 
     let mut rx = state.tx.subscribe();
-
-    // Loop de envio (broadcast + echo por enquanto)
-    let state_clone_send = Arc::clone(&state); // Clone pro loop de envio
+    // Prefixamos com _ pois não usamos diretamente no loop de envio
+    let _state_clone_send = Arc::clone(&state);
     let mut send_task = tokio::spawn(async move {
-         // Primeiro, envia mensagens do broadcast (outros clientes)
         while let Ok(msg_from_broadcast) = rx.recv().await {
-            // Verifica se a mensagem não é a própria config que acabamos de enviar (evita eco inicial)
-            // Esta lógica pode precisar ser mais robusta se outras msgs puderem vir do broadcast
-             if !msg_from_broadcast.contains("NODE_CONFIG") {
-                if sender.send(Message::Text(msg_from_broadcast)).await.is_err() {
+             if !msg_from_broadcast.contains("\"type\":\"NODE_CONFIG\"") {
+                 if sender.send(Message::Text(msg_from_broadcast)).await.is_err() {
                     println!("{} | 🔴 [WS Brazil] Falha ao enviar msg BROADCAST. Cliente desconectou.", Utc::now().to_rfc3339());
                     break;
                 }
-            }
+             }
         }
     });
 
-
-    // Loop de recebimento (processa msgs do cliente)
-    let state_clone_recv = Arc::clone(&state); // Clone pro loop de recebimento
+    let state_clone_recv = Arc::clone(&state);
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
             match msg {
                 Message::Text(text) => {
                     println!("{} | 🟢 [WS Brazil] Recebido do cliente: {}", Utc::now().to_rfc3339(), text);
-
-                    // TODO: Aqui virá a lógica de parsear o grafo JSON do frontend
-                    // e chamar os nodes HTTP correspondentes.
-
-                    // Por enquanto, só manda um ECHO de volta via broadcast
                     let echo_msg = BrazilToFrontend::Echo { message: format!("Brazil recebeu: {}", text) };
                     match serde_json::to_string(&echo_msg) {
                         Ok(json_str) => {
                              println!("{} | 🟢 [WS Brazil] Enviando ECHO via broadcast: {}", Utc::now().to_rfc3339(), json_str);
-                             // Envia para TODOS os clientes conectados (incluindo o remetente)
                             if state_clone_recv.tx.send(json_str).is_err() {
-                                 // Isso só falha se não houver NENHUM subscriber, o que é estranho aqui.
                                  println!("{} | 🟡 [WS Brazil] Aviso: Nenhum cliente ouvindo o broadcast.", Utc::now().to_rfc3339());
                             }
                         }
@@ -223,22 +230,21 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                     }
                     break;
                 }
-                _ => {} // Ignora outros tipos de mensagem (Binary, Ping, Pong...)
+                _ => {}
             }
         }
     });
 
-    // Gerencia o ciclo de vida das tasks
     tokio::select! {
         res = (&mut send_task) => {
             println!("{} | 🟡 [WS Brazil] Task de ENVIO finalizada.", Utc::now().to_rfc3339());
             if let Err(e) = res { println!("{} | 🔴 [WS Brazil] Erro na task de envio: {:?}", Utc::now().to_rfc3339(), e); }
-            recv_task.abort(); // Se envio morrer, mata recebimento
+            recv_task.abort();
         },
         res = (&mut recv_task) => {
             println!("{} | 🟡 [WS Brazil] Task de RECEBIMENTO finalizada.", Utc::now().to_rfc3339());
             if let Err(e) = res { println!("{} | 🔴 [WS Brazil] Erro na task de recebimento: {:?}", Utc::now().to_rfc3339(), e); }
-            send_task.abort(); // Se recebimento morrer, mata envio
+            send_task.abort();
         },
     };
 

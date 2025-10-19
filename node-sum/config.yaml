@@ -1,2 +1,8 @@
 # node-sum/config.yaml
 port: 3000
+label: "➕ Somar"        # Nome pro frontend
+node_type: "add"        # ID pro frontend (igual ao registry.ts antigo)
+inputs_mode: "n"        # Múltiplas entradas dinâmicas
+initial_inputs_count: 1 # Começa com 1 entrada
+outputs_mode: "1"       # Uma saída fixa
+initial_outputs_count: 1
