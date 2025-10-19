@@ -1,8 +1,5 @@
-// ndnm-core/src/runner.rs
-// --- CORREÇÃO AQUI ---
-// Importa NodeConfig diretamente do módulo config
-use crate::{AppError, config::NodeConfig, Node, ServerOpts};
-// --- FIM DA CORREÇÃO ---
+// ndnm-core/src/runner/mod.rs
+use crate::{error::AppError, node::Node, config::NodeConfig, server::{serve, ServerOpts}};
 use clap::{FromArgMatches, Parser};
 use std::{
     fs,
@@ -22,7 +19,12 @@ struct Cli {
 }
 
 /// A função principal que inicializa e serve um Node.
-pub async fn run_node<N>(node: N, name: &'static str, about: &'static str, node_manifest_dir: &'static str) -> Result<(), AppError>
+pub async fn run_node<N>(
+    node: N,
+    name: &'static str,
+    about: &'static str,
+    node_manifest_dir: &'static str,
+) -> Result<(), AppError>
 where
     N: Node + Send + Sync + 'static,
     N::Input: serde::de::DeserializeOwned + Send + 'static,
@@ -45,15 +47,14 @@ where
     }
 
     if cfg.port == 0 {
-         return Err(AppError::bad(format!(
+        return Err(AppError::bad(format!(
             "Porta inválida ou não definida no config: {}",
             cfg_path.display()
         )));
     }
 
-
     println!("{} ouvindo na porta {}", name, cfg.port);
-    crate::server::serve(ServerOpts { port: cfg.port }, node).await
+    serve(ServerOpts { port: cfg.port }, node).await
 }
 
 /// Tenta ler e parsear um arquivo de configuração YAML para NodeConfig.
@@ -73,7 +74,9 @@ pub fn load_config(cli_path: &str, node_manifest_dir: &str) -> Result<(NodeConfi
     }
 
     let manifest_dir = PathBuf::from(node_manifest_dir);
-    let file_name = Path::new(cli_path).file_name().unwrap_or_else(|| Path::new("config.yaml").as_os_str());
+    let file_name = Path::new(cli_path)
+        .file_name()
+        .unwrap_or_else(|| Path::new("config.yaml").as_os_str());
     let p2 = manifest_dir.join(file_name);
     if p2.exists() {
         let cfg = try_read_config(&p2)?;

@@ -1,3 +1,4 @@
+// ndnm-core/src/error/mod.rs
 use axum::{http::StatusCode, response::IntoResponse, Json};
 use serde::Serialize;
 use thiserror::Error;
@@ -12,13 +13,13 @@ pub enum AppError {
 }
 
 #[derive(Serialize)]
-struct ErrEnvelope<'a> {
+struct ErrorEnvelope<'a> {
     status: &'a str,
-    error: ErrDetail<'a>,
+    error: ErrorDetail<'a>,
 }
 
 #[derive(Serialize)]
-struct ErrDetail<'a> {
+struct ErrorDetail<'a> {
     code: &'a str,
     message: String,
 }
@@ -27,9 +28,9 @@ impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
         match self {
             AppError::BadRequest(msg) => {
-                let body = ErrEnvelope {
+                let body = ErrorEnvelope {
                     status: "error",
-                    error: ErrDetail {
+                    error: ErrorDetail {
                         code: "BAD_REQUEST",
                         message: msg,
                     },
@@ -37,9 +38,9 @@ impl IntoResponse for AppError {
                 (StatusCode::BAD_REQUEST, Json(body)).into_response()
             }
             AppError::Internal => {
-                let body = ErrEnvelope {
+                let body = ErrorEnvelope {
                     status: "error",
-                    error: ErrDetail {
+                    error: ErrorDetail {
                         code: "INTERNAL",
                         message: "internal error".into(),
                     },

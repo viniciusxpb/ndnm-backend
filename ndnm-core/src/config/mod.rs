@@ -1,3 +1,4 @@
+// ndnm-core/src/config/mod.rs
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
