@@ -36,12 +36,14 @@ impl Node for ListDirectoryNode {
             return Err(AppError::bad("O campo 'path' não pode ser vazio"));
         }
         
-        // **Visão Além do Alcance (Segurança)**:
-        // A gente não quer que o usuário possa pedir "../../../../etc/passwd"
-        // Isso é uma verificação simples contra "Path Traversal".
-        if input.path.contains("..") {
-            return Err(AppError::bad("Path traversal não é permitido. Use caminhos absolutos ou relativos para subpastas."));
-        }
+        // **Nota de Arquitetura (Removido)**:
+        // Removemos a verificação de ".." (path traversal).
+        // O `ndnm` é uma ferramenta local-first. O usuário *deve*
+        // ter permissão para navegar para qualquer pasta que ele
+        // queira, assim como faria no ComfyUI (ex: "D:\models").
+        // A segurança aqui é responsabilidade do usuário, já que
+        // o servidor roda localmente.
+        
         Ok(())
     }
 
