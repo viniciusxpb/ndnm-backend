@@ -1,25 +1,26 @@
-// node-fs-browser/src/main.rs
+// viniciusxpb/ndnm-backend/ndnm-backend-c893a1ebc17c6070ecb4b86d83dbca22839369a/node-fs-browser/src/main.rs
+mod domain; 
+
 use ndnm_core::{async_trait, AppError, Node};
 use serde::{Deserialize, Serialize};
-// FIX Warning: Removido walkdir::DirEntry (o compilador já detectou que era inútil)
-use std::{path::Path, time::SystemTime};
-use chrono::{DateTime, Utc};
-use walkdir;
+use domain::DirectoryEntry;
+
+// NOVOS IMPORTS PARA SERVIDOR MANUAL E CORS
+use ndnm_core::{router, load_config};
+use tower_http::cors::CorsLayer;
+use clap::{FromArgMatches, Parser};
+use std::net::SocketAddr;
+// IMPORT NECESSÁRIO PARA axum::serve
+use axum; 
+// IMPORT NECESSÁRIO PARA TcpListener (tokio)
+use tokio::net::TcpListener;
+
 
 // --- Estruturas de Comunicação (Input/Output) ---
 
 #[derive(Debug, Deserialize)]
 pub struct Input {
-    // O caminho que o frontend quer explorar (ex: C:\)
     path: String,
-}
-
-#[derive(Debug, Serialize, Clone)] 
-pub struct DirectoryEntry {
-    pub name: String,
-    pub is_dir: bool,
-    pub path: String, // Caminho completo para o próximo clique
-    pub modified: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize)]
@@ -28,60 +29,7 @@ pub struct Output {
     pub entries: Vec<DirectoryEntry>,
 }
 
-// --- Lógica de Negócio ---
-fn get_entries(path_str: &str) -> Result<Vec<DirectoryEntry>, AppError> {
-    let path = Path::new(path_str);
-    if !path.exists() {
-        return Err(AppError::bad(format!("Caminho não existe: {}", path_str)));
-    }
-    if !path.is_dir() {
-        return Err(AppError::bad(format!("Caminho não é um diretório: {}", path_str)));
-    }
-    
-    let mut entries = Vec::new();
-    
-    // Usamos WalkDir para varrer apenas o primeiro nível (max_depth(1))
-    for entry_result in walkdir::WalkDir::new(path).min_depth(1).max_depth(1) {
-        let entry = entry_result.map_err(|e| {
-            AppError::bad(format!("Falha ao ler entrada: {}", e))
-        })?;
-
-        // Ignoramos arquivos/pastas ocultas, como .git
-        if entry.file_name().to_string_lossy().starts_with('.') { continue; }
-        
-        let metadata = entry.metadata().map_err(|e| 
-            AppError::bad(format!("Falha ao ler metadados: {}", e))
-        )?;
-
-        let modified: DateTime<Utc> = metadata.modified()
-            .unwrap_or_else(|_| SystemTime::now()) 
-            .into();
-        
-        entries.push(DirectoryEntry {
-            name: entry.file_name().to_string_lossy().into_owned(),
-            is_dir: metadata.is_dir(),
-            path: entry.path().to_string_lossy().into_owned(),
-            modified,
-        });
-    }
-
-    // Opcional: Adiciona '..' (Up Directory)
-    if let Some(parent) = path.parent() {
-         entries.push(DirectoryEntry {
-            name: "..".to_string(),
-            is_dir: true,
-            path: parent.to_string_lossy().into_owned(),
-            modified: Utc::now(),
-        });
-    }
-    
-    // Ordena Pastas primeiro
-    entries.sort_by(|a, b| b.is_dir.cmp(&a.is_dir).then(a.name.cmp(&b.name)));
-    
-    Ok(entries)
-}
-
-// --- Implementação do Node (para expor a lógica) ---
+// --- Implementação do Node ---
 #[derive(Default)]
 pub struct FsBrowserNode;
 
@@ -98,14 +46,18 @@ impl Node for FsBrowserNode {
     }
 
     async fn process(&self, input: Self::Input) -> Result<Self::Output, AppError> {
+        println!("🟢 [FS-Browser] Processando requisição para: {}", input.path);
+        
         let path_clone = input.path.clone();
 
         let entries = tokio::task::spawn_blocking(move || {
-            get_entries(&path_clone)
+            domain::get_entries(&path_clone)
         })
         .await
         .map_err(|_| AppError::Internal)?
         ?;
+
+        println!("🟢 [FS-Browser] Enviando resposta com {} entradas.", entries.len());
 
         Ok(Output {
             current_path: input.path,
@@ -114,13 +66,47 @@ impl Node for FsBrowserNode {
     }
 }
 
+// Boilerplate CLI (Copiado de ndnm-core::runner/mod.rs)
+#[derive(Parser, Debug)]
+struct Cli {
+    #[arg(long, default_value = "config.yaml")]
+    config: String,
+    #[arg(short, long)]
+    port: Option<u16>,
+}
+
+
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
-    ndnm_core::run_node(
-        FsBrowserNode::default(),
-        "node-fs-browser",
-        "Node de serviço para navegação no sistema de arquivos",
-        env!("CARGO_MANIFEST_DIR"),
-    )
-    .await
+    // 1. Configuração do CLI e Config
+    let cli_cmd = <Cli as clap::CommandFactory>::command()
+        .name("node-fs-browser")
+        .about("Node de serviço para navegação no sistema de arquivos")
+        .version(env!("CARGO_PKG_VERSION"));
+
+    let matches = cli_cmd.get_matches();
+    let args = Cli::from_arg_matches(&matches)
+        .map_err(|e| AppError::bad(format!("erro ao parsear argumentos: {}", e)))?;
+
+    let (mut cfg, cfg_path) = load_config(&args.config, env!("CARGO_MANIFEST_DIR"))?;
+    println!("usando config: {}", cfg_path.display());
+
+    if let Some(p) = args.port { cfg.port = p; }
+    if cfg.port == 0 { return Err(AppError::bad(format!("Porta inválida ou não definida no config: {}", cfg_path.display()))); }
+    
+    // 2. Criação do Router, INJETANDO CORS
+    let node = FsBrowserNode::default();
+    let app_router = router(node); // Usa ndnm_core::router para criar a estrutura /health e /run
+
+    // CORREÇÃO CORS: Aplica a camada CORS permissiva ao router
+    let cors = CorsLayer::permissive();
+    let app = app_router.layer(cors);
+
+    // 3. Servir a Aplicação (Corrigido os imports)
+    let addr: SocketAddr = format!("0.0.0.0:{}", cfg.port).parse().unwrap();
+    println!("node-fs-browser ouvindo na porta {}", cfg.port);
+    println!("listening on http://{addr}");
+    
+    let listener = TcpListener::bind(addr).await.unwrap();
+    axum::serve(listener, app.into_make_service()).await.map_err(|_| AppError::Internal)
 }

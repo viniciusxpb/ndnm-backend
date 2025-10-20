@@ -1,4 +1,4 @@
-# node-fs-browser/Cargo.toml
+# viniciusxpb/ndnm-backend/ndnm-backend-c893a1ebc17c6070ecb4b86d83dbca22839369a/node-fs-browser/Cargo.toml
 [package]
 name = "node-fs-browser"
 version = "0.1.0"
@@ -11,8 +11,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 clap = { version = "4.5", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
-
-# Para lidar com I/O de disco
 walkdir = "2"
-# FIX E0432: Adicionado chrono
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] } 
+tower-http = { version = "0.5", features = ["cors"] } 
+
+# FIX E0433: Adicionado axum para usar axum::serve no main.rs
+axum = "0.7"

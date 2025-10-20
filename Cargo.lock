@@ -1009,12 +1009,14 @@ dependencies = [
 name = "node-fs-browser"
 version = "0.1.0"
 dependencies = [
+ "axum",
  "chrono",
  "clap",
  "ndnm-core",
  "serde",
  "serde_json",
  "tokio",
+ "tower-http 0.5.2",
  "walkdir",
 ]
 
