@@ -8,6 +8,7 @@ members = [
     "node-empty-latent-image",
     "node-list-directory",
     "ndnm-brazil",
-    "node-fixed-value",
+    "node-fixed-value", "node-fs-browser",
+    "node-fs-browser",
 ]
 resolver = "2"

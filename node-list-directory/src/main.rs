@@ -1,4 +1,4 @@
-// node-list-directory/src/main.rs
+// viniciusxpb/ndnm-backend/ndnm-backend-c893a1ebc17c6070ecb4b86d83dbca228239369a/node-list-directory/src/main.rs
 mod domain;
 
 use ndnm_core::{async_trait, AppError, Node};
@@ -10,7 +10,8 @@ use domain::DirectoryEntry;
 /// O JSON que o node espera receber
 #[derive(Debug, Deserialize)]
 pub struct Input {
-    path: String,
+    // CORREÇÃO: Renomeado de 'path' para 'value' para receber o input do frontend (data.value)
+    value: String,
 }
 
 /// O JSON que o node vai responder
@@ -32,7 +33,8 @@ impl Node for ListDirectoryNode {
 
     /// Validação rápida e barata.
     fn validate(&self, input: &Self::Input) -> Result<(), AppError> {
-        if input.path.is_empty() {
+        // CORREÇÃO: Usamos input.value
+        if input.value.is_empty() {
             return Err(AppError::bad("O campo 'path' não pode ser vazio"));
         }
         
@@ -50,7 +52,8 @@ impl Node for ListDirectoryNode {
     /// Onde a mágica acontece (de forma assíncrona)
     async fn process(&self, input: Self::Input) -> Result<Self::Output, AppError> {
         // Clona o path para mover para a thread de bloqueio
-        let path_clone = input.path.clone();
+        // CORREÇÃO: Usamos input.value como o caminho
+        let path_clone = input.value.clone();
 
         // **A MÁGICA DE PERFORMANCE!**
         // A gente pede pro Tokio rodar nossa função `domain::list_directory`
@@ -65,7 +68,8 @@ impl Node for ListDirectoryNode {
 
         // Se deu tudo certo, monta a resposta
         Ok(Output {
-            path: input.path,
+            // CORREÇÃO: Usamos input.value
+            path: input.value,
             entries,
         })
     }

@@ -1,0 +1,6 @@
+# node-fs-browser/config.yaml
+port: 3011
+label: "Navegador de Pastas (Serviço)"
+node_type: "fsBrowser"
+inputs_mode: "0"
+outputs_mode: "0"

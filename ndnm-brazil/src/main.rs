@@ -14,11 +14,15 @@ use futures_util::{stream::StreamExt, sink::SinkExt};
 use ndnm_core::{AppError, load_config};
 use std::{fs, net::SocketAddr, path::Path as StdPath, sync::Arc};
 use tokio::sync::broadcast;
-use chrono::Utc;
-use serde::Serialize;
+// FIX E0412: Importado DateTime
+use chrono::{Utc, DateTime}; 
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use walkdir::WalkDir;
 use tower_http::cors::CorsLayer;
+use reqwest::Client; // Cliente HTTP para chamar o node-fs-browser
+
+// --- Protocolo WS para o Frontend ---
 
 #[derive(Serialize, Debug, Clone)]
 struct NodeTypeInfo {
@@ -34,7 +38,46 @@ enum BrazilToFrontend {
     NodeConfig { payload: Vec<NodeTypeInfo> },
     #[serde(rename = "ECHO")]
     Echo { message: String },
+    // NOVO: Resposta da navegação de arquivos
+    #[serde(rename = "FS_BROWSE_RESULT")]
+    FsBrowseResult { 
+        current_path: String, 
+        entries: Vec<DirectoryEntry> 
+    },
 }
+
+#[derive(Deserialize, Debug)]
+#[serde(tag = "type")]
+enum FrontendToBrazil {
+    // FIX Warning: request_id é mantido para compatibilidade, mas ignorado no processamento
+    #[serde(rename = "BROWSE_PATH")]
+    BrowsePath { path: String, request_id: String },
+    #[serde(rename = "ECHO")]
+    Echo { message: String },
+}
+
+// Estrutura do node-fs-browser
+#[derive(Serialize, Deserialize, Debug)]
+struct FsBrowserInput {
+    path: String,
+}
+
+// Estrutura do Output do node-fs-browser
+// FIX E0277: Adicionado Clone para que o vetor em BrazilToFrontend seja clonável
+#[derive(Serialize, Deserialize, Debug, Clone)] 
+struct DirectoryEntry {
+    pub name: String,
+    pub is_dir: bool,
+    pub path: String,
+    pub modified: DateTime<Utc>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct FsBrowserOutput {
+    pub current_path: String,
+    pub entries: Vec<DirectoryEntry>,
+}
+
 
 #[derive(Parser, Debug)]
 struct Cli {
@@ -48,6 +91,8 @@ struct Cli {
 struct AppState {
     tx: broadcast::Sender<String>,
     known_nodes: Vec<NodeTypeInfo>,
+    http_client: Client, // Cliente HTTP
+    fs_browser_port: u16, // Porta do node-fs-browser (configurada no main)
 }
 
 fn discover_nodes() -> Vec<NodeTypeInfo> {
@@ -168,10 +213,27 @@ async fn main() -> Result<(), AppError> {
     println!("{} | 🟢 [WS Brazil] ndnm-brazil (Maestro) usando config: {}", Utc::now().to_rfc3339(), config_path.display());
     if let Some(p) = args.port { brazil_config.port = p; }
     if brazil_config.port == 0 { return Err(AppError::bad(format!("Porta inválida: {}", config_path.display()))); }
+    
+    // NOVO: Descobrir a porta do node-fs-browser (Assumindo que ele está na lista de nodes)
     let discovered_nodes = discover_nodes();
-    println!("{} | 🟢 [WS Brazil] Nodes descobertos (final): {:?}", Utc::now().to_rfc3339(), discovered_nodes.iter().map(|n| &n.r#type).collect::<Vec<_>>());
+    let fs_browser_port = discovered_nodes.iter()
+        .find(|n| n.r#type == "fsBrowser")
+        .and_then(|_| load_config("../node-fs-browser/config.yaml", "")
+            .ok().map(|(cfg, _)| cfg.port))
+        .unwrap_or(3011); // Fallback para 3011, conforme definido no config.yaml
+
+    println!("{} | 🟢 [WS Brazil] Node de Navegação de Arquivos (fsBrowser) na porta: {}", Utc::now().to_rfc3339(), fs_browser_port);
+
+
+    let http_client = Client::new();
     let (tx, _) = broadcast::channel(100);
-    let app_state = Arc::new(AppState { tx, known_nodes: discovered_nodes });
+    
+    let app_state = Arc::new(AppState { 
+        tx, 
+        known_nodes: discovered_nodes,
+        http_client,
+        fs_browser_port,
+    });
     
     let cors = CorsLayer::permissive();
     
@@ -200,6 +262,8 @@ async fn ws_handler( ws: WebSocketUpgrade, State(state): State<Arc<AppState>> ) 
 async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
     println!("{} | 🟢 [WS Brazil] Cliente WebSocket CONECTADO!", Utc::now().to_rfc3339());
     let (mut sender, mut receiver) = socket.split();
+    
+    // MANDA O NODE_CONFIG INICIAL
     let config_msg = BrazilToFrontend::NodeConfig { payload: state.known_nodes.clone() };
     match serde_json::to_string(&config_msg) {
         Ok(json_str) => {
@@ -208,8 +272,12 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
         }
         Err(e) => { println!("{} | 🔴 [WS Brazil] Erro ao serializar NODE_CONFIG: {}", Utc::now().to_rfc3339(), e); return; }
     }
+    
     let mut rx = state.tx.subscribe();
-    let _state_clone_send = Arc::clone(&state);
+    // FIX Warning: O underscore _ indica que a variável não será usada
+    let _state_clone_send = Arc::clone(&state); 
+    
+    // TASK DE ENVIO (BROADCAST)
     let mut send_task = tokio::spawn(async move {
         while let Ok(msg_from_broadcast) = rx.recv().await {
             if !msg_from_broadcast.contains("\"type\":\"NODE_CONFIG\"") {
@@ -217,19 +285,89 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
             }
         }
     });
+    
     let state_clone_recv = Arc::clone(&state);
+    
+    // TASK DE RECEBIMENTO (COMANDOS DO FRONT)
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
             match msg {
                 Message::Text(text) => {
                     println!("{} | 🟢 [WS Brazil] Recebido do cliente: {}", Utc::now().to_rfc3339(), text);
-                    let echo_msg = BrazilToFrontend::Echo { message: format!("Brazil recebeu: {}", text) };
-                    match serde_json::to_string(&echo_msg) {
-                        Ok(json_str) => {
-                            println!("{} | 🟢 [WS Brazil] Enviando ECHO via broadcast: {}", Utc::now().to_rfc3339(), json_str);
-                            if state_clone_recv.tx.send(json_str).is_err() { }
+                    
+                    match serde_json::from_str::<FrontendToBrazil>(&text) {
+                        // FIX Warning: unused variable: request_id
+                        Ok(FrontendToBrazil::BrowsePath { path, request_id: _ }) => {
+                            // CHAMA O NODE FS-BROWSER VIA HTTP
+                            let node_url = format!("http://127.0.0.1:{}/run", state_clone_recv.fs_browser_port);
+                            let input_body = FsBrowserInput { path };
+                            
+                            println!("{} | 🟡 [WS Brazil] Chamando node-fs-browser em: {}", Utc::now().to_rfc3339(), node_url);
+
+                            let result = state_clone_recv.http_client
+                                .post(&node_url)
+                                .json(&input_body)
+                                .send()
+                                .await;
+                            
+                            match result {
+                                Ok(resp) if resp.status().is_success() => {
+                                    match resp.json::<FsBrowserOutput>().await {
+                                        Ok(output) => {
+                                            // ENVIA O RESULTADO PARA O FRONT VIA BROADCAST
+                                            let fs_result = BrazilToFrontend::FsBrowseResult { 
+                                                current_path: output.current_path, 
+                                                entries: output.entries
+                                            };
+                                            if let Ok(json_str) = serde_json::to_string(&fs_result) {
+                                                if state_clone_recv.tx.send(json_str).is_err() { /* ignore */ }
+                                            }
+                                        }
+                                        Err(e) => { 
+                                            println!("{} | 🔴 [WS Brazil] Erro ao deserializar output do node: {}", Utc::now().to_rfc3339(), e); 
+                                            // Envia erro para o frontend
+                                            let error_msg = BrazilToFrontend::Echo { message: format!("ERRO DESERIALIZAÇÃO FS-BROWSER: {}", e) };
+                                            if let Ok(json_str) = serde_json::to_string(&error_msg) { if state_clone_recv.tx.send(json_str).is_err() { /* ignore */ } }
+                                        }
+                                    }
+                                }
+                                Ok(resp) => {
+                                    // FIX E0382: Salva o status antes de chamar resp.text().await
+                                    let status = resp.status(); 
+                                    let error_text = resp.text().await.unwrap_or_default();
+                                    println!("{} | 🔴 [WS Brazil] Erro HTTP do node (Status {}): {}", Utc::now().to_rfc3339(), status, error_text);
+                                    
+                                    // NOVO LOG: Enviar um erro de volta para o frontend para fins de debug
+                                    let error_msg = BrazilToFrontend::Echo { 
+                                        message: format!("ERRO FS-BROWSER: Status {} - {}", status, error_text) 
+                                    };
+                                    if let Ok(json_str) = serde_json::to_string(&error_msg) {
+                                         if state_clone_recv.tx.send(json_str).is_err() { /* ignore */ }
+                                    }
+                                }
+                                Err(e) => { 
+                                    println!("{} | 🔴 [WS Brazil] Falha ao conectar/enviar para o node: {}", Utc::now().to_rfc3339(), e); 
+                                    
+                                    // NOVO LOG: Enviar um erro de conexão para o frontend
+                                    let error_msg = BrazilToFrontend::Echo { 
+                                        message: format!("ERRO CONEXÃO FS-BROWSER: Node não encontrado na porta {}", state_clone_recv.fs_browser_port) 
+                                    };
+                                     if let Ok(json_str) = serde_json::to_string(&error_msg) {
+                                         if state_clone_recv.tx.send(json_str).is_err() { /* ignore */ }
+                                    }
+                                }
+                            }
                         }
-                        Err(e) => { println!("{} | 🔴 [WS Brazil] Erro ao serializar ECHO: {}", Utc::now().to_rfc3339(), e); }
+                        Ok(FrontendToBrazil::Echo { message }) => {
+                            let echo_msg = BrazilToFrontend::Echo { message: format!("Brazil recebeu: {}", message) };
+                            if let Ok(json_str) = serde_json::to_string(&echo_msg) {
+                                println!("{} | 🟢 [WS Brazil] Enviando ECHO via broadcast: {}", Utc::now().to_rfc3339(), json_str);
+                                if state_clone_recv.tx.send(json_str).is_err() { }
+                            }
+                        }
+                        Err(e) => {
+                            println!("{} | 🔴 [WS Brazil] Erro ao deserializar msg do front: {}", Utc::now().to_rfc3339(), e);
+                        }
                     }
                 }
                 Message::Close(_) => { break; }
@@ -237,6 +375,8 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
             }
         }
     });
+    
+    // Seleção para terminar a tarefa se a outra falhar
     tokio::select! {
         _ = (&mut send_task) => recv_task.abort(),
         _ = (&mut recv_task) => send_task.abort(),

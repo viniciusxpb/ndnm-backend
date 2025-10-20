@@ -1,6 +1,11 @@
+# viniciusxpb/ndnm-backend/ndnm-backend-c893a1ebc17c6070ecb4b86d83dbca228239369a/node-list-directory/config.yaml
 # node-list-directory/config.yaml
 port: 3009
 label: "📂 Listar Diretório"
 node_type: "listDirectory"
 inputs_mode: "0" # Sem inputs de fluxo, path virá de um campo no node
 outputs_mode: "1" # Saída com a lista de arquivos/pastas
+# CORREÇÃO: Definido como "selector"
+input_fields:
+  - name: "path" # Nome semântico para exibição/metadata
+    type: "selector" # Tipo do input para o frontend renderizar
