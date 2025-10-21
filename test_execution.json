@@ -1,0 +1,50 @@
+{
+  "type": "EXECUTE_PLAY",
+  "play_node_id": "play-1",
+  "workspace_id": "test-workspace",
+  "graph": {
+    "nodes": [
+      {
+        "id": "sum-1",
+        "node_type": "add",
+        "port": 3000,
+        "label": "➕ Somar",
+        "data": {
+          "variables": [10, 20, 5]
+        }
+      },
+      {
+        "id": "subtract-1",
+        "node_type": "subtract",
+        "port": 3001,
+        "label": "➖ Subtrair",
+        "data": {
+          "variables": [100, 15]
+        }
+      },
+      {
+        "id": "play-1",
+        "node_type": "playButton",
+        "port": 3020,
+        "label": "▶️ Play",
+        "data": {
+          "action": "execute"
+        }
+      }
+    ],
+    "connections": [
+      {
+        "from_node_id": "sum-1",
+        "from_output_index": 0,
+        "to_node_id": "subtract-1",
+        "to_input_index": 0
+      },
+      {
+        "from_node_id": "subtract-1",
+        "from_output_index": 0,
+        "to_node_id": "play-1",
+        "to_input_index": 0
+      }
+    ]
+  }
+}

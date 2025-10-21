@@ -6,7 +6,10 @@
       "Bash(powershell -Command \"Invoke-RestMethod -Uri http://localhost:3020/run -Method Post -ContentType ''application/json'' -Body ''{\"\"action\"\":\"\"execute\"\"}''\")",
       "Bash(powershell -Command \"Invoke-RestMethod -Uri http://localhost:3021/health\")",
       "Bash(powershell -Command \"Invoke-RestMethod -Uri http://localhost:3021/run -Method Post -ContentType ''application/json'' -Body ''{\"\"action\"\":\"\"execute\"\"}''\")",
-      "Bash(cargo test:*)"
+      "Bash(cargo test:*)",
+      "Bash(powershell -Command \"Invoke-RestMethod -Uri http://localhost:3000/run -Method Post -ContentType ''application/json'' -Body ''{\"\"variables\"\":[10, 20, 5]}''\")",
+      "Bash(powershell -Command \"Invoke-RestMethod -Uri http://localhost:3001/run -Method Post -ContentType ''application/json'' -Body ''{\"\"variables\"\":[100, 30, 5]}''\")",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []

@@ -44,9 +44,35 @@ enum BrazilToFrontend {
     Echo { message: String },
     // NOVO: Resposta da navegação de arquivos
     #[serde(rename = "FS_BROWSE_RESULT")]
-    FsBrowseResult { 
-        current_path: String, 
-        entries: Vec<DirectoryEntry> 
+    FsBrowseResult {
+        current_path: String,
+        entries: Vec<DirectoryEntry>
+    },
+    // NOVO (Fase 2): Status de execução em tempo real
+    #[serde(rename = "EXECUTION_STATUS")]
+    ExecutionStatus {
+        run_id: String,
+        status: String,
+        current_node: Option<String>,
+        completed_nodes: Vec<String>,
+        remaining_nodes: Vec<String>,
+    },
+    // NOVO (Fase 2): Resultado final da execução
+    #[serde(rename = "EXECUTION_COMPLETE")]
+    ExecutionComplete {
+        run_id: String,
+        status: String,
+        total_nodes: usize,
+        executed_nodes: usize,
+        cached_nodes: usize,
+        duration_ms: u64,
+    },
+    // NOVO (Fase 2): Erro durante execução
+    #[serde(rename = "EXECUTION_ERROR")]
+    ExecutionError {
+        run_id: String,
+        error: String,
+        failed_node: Option<String>,
     },
 }
 
@@ -58,6 +84,13 @@ enum FrontendToBrazil {
     BrowsePath { path: String, request_id: String },
     #[serde(rename = "ECHO")]
     Echo { message: String },
+    // NOVO (Fase 2): Executar Play node
+    #[serde(rename = "EXECUTE_PLAY")]
+    ExecutePlay {
+        play_node_id: String,
+        workspace_id: String,
+        graph: execution::WorkflowGraph,
+    },
 }
 
 // Estrutura do node-fs-browser
@@ -367,6 +400,56 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>) {
                             if let Ok(json_str) = serde_json::to_string(&echo_msg) {
                                 println!("{} | 🟢 [WS Brazil] Enviando ECHO via broadcast: {}", Utc::now().to_rfc3339(), json_str);
                                 if state_clone_recv.tx.send(json_str).is_err() { }
+                            }
+                        }
+                        Ok(FrontendToBrazil::ExecutePlay { play_node_id, workspace_id, graph }) => {
+                            println!("{} | 🚀 [WS Brazil] EXECUTE_PLAY recebido - play_node: {}, workspace: {}",
+                                Utc::now().to_rfc3339(), play_node_id, workspace_id);
+
+                            // Cria ExecutionEngine
+                            let engine = execution::ExecutionEngine::new();
+
+                            // Cria request de execução
+                            let exec_request = execution::ExecutionRequest {
+                                play_node_id: play_node_id.clone(),
+                                workspace_id: workspace_id.clone(),
+                                graph,
+                            };
+
+                            // Executa! (Fase 2: bloqueante - Fase 3: async + progress updates)
+                            match engine.execute(exec_request).await {
+                                Ok(result) => {
+                                    println!("{} | ✅ [WS Brazil] Execução completa: run_id={}, nodes={}/{}",
+                                        Utc::now().to_rfc3339(), result.run_id, result.executed_nodes, result.total_nodes);
+
+                                    // Envia resultado pro frontend
+                                    let complete_msg = BrazilToFrontend::ExecutionComplete {
+                                        run_id: result.run_id,
+                                        status: "completed".to_string(),
+                                        total_nodes: result.total_nodes,
+                                        executed_nodes: result.executed_nodes,
+                                        cached_nodes: result.cached_nodes,
+                                        duration_ms: result.duration_ms,
+                                    };
+
+                                    if let Ok(json_str) = serde_json::to_string(&complete_msg) {
+                                        if state_clone_recv.tx.send(json_str).is_err() { /* ignore */ }
+                                    }
+                                }
+                                Err(error) => {
+                                    println!("{} | ❌ [WS Brazil] Erro na execução: {}", Utc::now().to_rfc3339(), error);
+
+                                    // Envia erro pro frontend
+                                    let error_msg = BrazilToFrontend::ExecutionError {
+                                        run_id: "unknown".to_string(), // TODO: Fase 3 - retornar run_id mesmo em erro
+                                        error: error.clone(),
+                                        failed_node: None, // TODO: Fase 3 - detectar node que falhou
+                                    };
+
+                                    if let Ok(json_str) = serde_json::to_string(&error_msg) {
+                                        if state_clone_recv.tx.send(json_str).is_err() { /* ignore */ }
+                                    }
+                                }
                             }
                         }
                         Err(e) => {
