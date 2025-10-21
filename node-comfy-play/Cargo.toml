@@ -1,0 +1,11 @@
+# node-comfy-play/Cargo.toml
+[package]
+name = "node-comfy-play"
+version = "0.1.0"
+edition = "2021"
+default-run = "node-comfy-play"
+
+[dependencies]
+ndnm-core = { path = "../ndnm-core" }
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }

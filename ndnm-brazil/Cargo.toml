@@ -35,6 +35,9 @@ tokio-tungstenite = "0.23"
 # Chamadas HTTP para outros nodes
 reqwest = { version = "0.12", features = ["json"] }
 
+# Geração de IDs aleatórios
+rand = "0.8"
+
 [dev-dependencies]
 # Para futuros testes
 axum = "0.7"

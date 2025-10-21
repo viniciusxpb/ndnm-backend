@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo build:*)",
+      "Bash(cargo run:*)",
+      "Bash(powershell -Command \"Invoke-RestMethod -Uri http://localhost:3020/run -Method Post -ContentType ''application/json'' -Body ''{\"\"action\"\":\"\"execute\"\"}''\")",
+      "Bash(powershell -Command \"Invoke-RestMethod -Uri http://localhost:3021/health\")",
+      "Bash(powershell -Command \"Invoke-RestMethod -Uri http://localhost:3021/run -Method Post -ContentType ''application/json'' -Body ''{\"\"action\"\":\"\"execute\"\"}''\")",
+      "Bash(cargo test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

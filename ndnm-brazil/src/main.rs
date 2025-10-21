@@ -1,4 +1,8 @@
 // ndnm-brazil/src/main.rs
+
+// Módulo de execução (Fase 2)
+mod execution;
+
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
@@ -15,7 +19,7 @@ use ndnm_core::{AppError, load_config};
 use std::{fs, net::SocketAddr, path::Path as StdPath, sync::Arc};
 use tokio::sync::broadcast;
 // FIX E0412: Importado DateTime
-use chrono::{Utc, DateTime}; 
+use chrono::{Utc, DateTime};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use walkdir::WalkDir;

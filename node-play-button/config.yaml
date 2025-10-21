@@ -1,0 +1,8 @@
+# node-play-button/config.yaml
+port: 3020
+label: "▶️ Play (Advanced)"
+node_type: "playButton"
+inputs_mode: "1"           # Tem entrada (conecta em outros nodes)
+initial_inputs_count: 1
+outputs_mode: "1"          # TEM saída (pode conectar em outro Play!)
+initial_outputs_count: 1

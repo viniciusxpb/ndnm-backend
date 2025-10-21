@@ -1,0 +1,8 @@
+# node-comfy-play/config.yaml
+port: 3021
+label: "▶️ Play (ComfyUI Mode)"
+node_type: "comfyPlay"
+inputs_mode: "1"           # Tem entrada (conecta em outros nodes)
+initial_inputs_count: 1
+outputs_mode: "0"          # SEM saída (nó terminal, igual ComfyUI)
+initial_outputs_count: 0

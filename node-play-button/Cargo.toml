@@ -1,0 +1,11 @@
+# node-play-button/Cargo.toml
+[package]
+name = "node-play-button"
+version = "0.1.0"
+edition = "2021"
+default-run = "node-play-button"
+
+[dependencies]
+ndnm-core = { path = "../ndnm-core" }
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }

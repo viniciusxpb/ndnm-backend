@@ -954,6 +954,7 @@ dependencies = [
  "clap",
  "futures-util",
  "ndnm-core",
+ "rand",
  "reqwest",
  "serde",
  "serde_json",
@@ -977,6 +978,15 @@ dependencies = [
  "thiserror",
  "tokio",
  "tower 0.4.13",
+]
+
+[[package]]
+name = "node-comfy-play"
+version = "0.1.0"
+dependencies = [
+ "ndnm-core",
+ "serde",
+ "tokio",
 ]
 
 [[package]]
@@ -1046,6 +1056,15 @@ dependencies = [
  "serde_json",
  "tokio",
  "tower 0.4.13",
+]
+
+[[package]]
+name = "node-play-button"
+version = "0.1.0"
+dependencies = [
+ "ndnm-core",
+ "serde",
+ "tokio",
 ]
 
 [[package]]
