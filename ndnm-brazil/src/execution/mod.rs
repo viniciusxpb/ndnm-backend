@@ -8,5 +8,4 @@ pub mod resolver;
 pub mod executor;
 
 pub use types::*;
-pub use resolver::DependencyResolver;
 pub use executor::ExecutionEngine;

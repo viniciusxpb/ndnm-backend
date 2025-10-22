@@ -1,5 +1,20 @@
 {
-  "edges": [],
+  "edges": [
+    {
+      "id": "e-n1-n2-1761121908973",
+      "source": "n1",
+      "sourceHandle": "out_0",
+      "target": "n2",
+      "targetHandle": "in_0"
+    },
+    {
+      "id": "e-n2-n3-1761121914174",
+      "source": "n2",
+      "sourceHandle": "out_0",
+      "target": "n3",
+      "targetHandle": "in_0"
+    }
+  ],
   "name": "workspace-1",
   "nodes": [
     {
@@ -13,14 +28,52 @@
         "inputsCount": 1,
         "inputsMode": 0,
         "label": "🔢 Valor Fixo",
-        "outputsCount": 1,
+        "outputsCount": 2,
         "outputsMode": "n",
-        "value": "512"
+        "value": "123"
       },
       "id": "n1",
       "position": {
-        "x": 316.625,
-        "y": 456.5
+        "x": 266.78125,
+        "y": 378.5
+      },
+      "type": "fixedValue"
+    },
+    {
+      "data": {
+        "inputsCount": 2,
+        "inputsMode": "n",
+        "label": "➕ Somar",
+        "outputsCount": 1,
+        "outputsMode": 1,
+        "value": null
+      },
+      "id": "n2",
+      "position": {
+        "x": 236.921875,
+        "y": 528
+      },
+      "type": "add"
+    },
+    {
+      "data": {
+        "input_fields": [
+          {
+            "name": "value",
+            "type": "text"
+          }
+        ],
+        "inputsCount": 1,
+        "inputsMode": 0,
+        "label": "🔢 Valor Fixo",
+        "outputsCount": 1,
+        "outputsMode": "n",
+        "value": ""
+      },
+      "id": "n3",
+      "position": {
+        "x": 563.421875,
+        "y": 522.5
       },
       "type": "fixedValue"
     }

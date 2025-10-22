@@ -10,7 +10,8 @@ use std::collections::HashMap;
 pub struct ExecutionRequest {
     /// ID do node Play que foi disparado
     pub play_node_id: String,
-    /// ID do workspace atual
+    /// ID do workspace atual (será usado em fases futuras para logging/caching)
+    #[allow(dead_code)]
     pub workspace_id: String,
     /// Grafo completo (nodes + conexões)
     pub graph: WorkflowGraph,
@@ -56,6 +57,7 @@ pub struct Connection {
 /// Status de execução de um node individual
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "lowercase")]
+#[allow(dead_code)]
 pub enum NodeExecutionStatus {
     Pending,
     Executing,
@@ -66,6 +68,7 @@ pub enum NodeExecutionStatus {
 
 /// Resultado de execução de um node
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct NodeExecutionResult {
     pub node_id: String,
     pub status: NodeExecutionStatus,
@@ -76,7 +79,9 @@ pub struct NodeExecutionResult {
 }
 
 /// Status geral da execução (enviado via WebSocket pro frontend)
+/// Será usado na Fase 3 para updates em tempo real
 #[derive(Debug, Clone, Serialize)]
+#[allow(dead_code)]
 pub struct ExecutionStatus {
     pub run_id: String,
     pub status: ExecutionState,
@@ -90,6 +95,7 @@ pub struct ExecutionStatus {
 /// Estado geral da execução
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "lowercase")]
+#[allow(dead_code)]
 pub enum ExecutionState {
     Starting,
     Executing,

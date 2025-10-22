@@ -49,6 +49,8 @@ enum BrazilToFrontend {
         entries: Vec<DirectoryEntry>
     },
     // NOVO (Fase 2): Status de execução em tempo real
+    // Será usado na Fase 3 para updates em tempo real
+    #[allow(dead_code)]
     #[serde(rename = "EXECUTION_STATUS")]
     ExecutionStatus {
         run_id: String,
@@ -81,7 +83,11 @@ enum BrazilToFrontend {
 enum FrontendToBrazil {
     // FIX Warning: request_id é mantido para compatibilidade, mas ignorado no processamento
     #[serde(rename = "BROWSE_PATH")]
-    BrowsePath { path: String, request_id: String },
+    BrowsePath {
+        path: String,
+        #[allow(dead_code)]
+        request_id: String
+    },
     #[serde(rename = "ECHO")]
     Echo { message: String },
     // NOVO (Fase 2): Executar Play node

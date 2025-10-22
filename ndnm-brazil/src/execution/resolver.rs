@@ -3,12 +3,11 @@
 // Resolvedor de dependências do grafo
 // Converte grafo de nodes → lista ordenada de execução (depth-first)
 
-use super::types::{WorkflowGraph, GraphNode, Connection};
+use super::types::{WorkflowGraph, GraphNode};
 use std::collections::{HashMap, HashSet};
 
 /// Resolvedor de dependências
 pub struct DependencyResolver<'a> {
-    graph: &'a WorkflowGraph,
     /// Mapa de node_id → GraphNode (pra busca rápida)
     node_map: HashMap<String, &'a GraphNode>,
     /// Mapa de node_id → lista de dependências (nodes que alimentam ele)
@@ -37,7 +36,6 @@ impl<'a> DependencyResolver<'a> {
         }
 
         Self {
-            graph,
             node_map,
             dependencies,
         }
@@ -105,6 +103,7 @@ impl<'a> DependencyResolver<'a> {
     }
 
     /// Resolve múltiplos nodes de partida (útil se tiver múltiplos Plays)
+    #[allow(dead_code)]
     pub fn resolve_from_multiple(&self, start_node_ids: &[String]) -> Result<Vec<&'a GraphNode>, String> {
         let mut visited = HashSet::new();
         let mut execution_order = Vec::new();
@@ -124,6 +123,7 @@ impl<'a> DependencyResolver<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::types::Connection;
     use serde_json::json;
 
     #[test]
