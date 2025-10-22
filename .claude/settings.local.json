@@ -9,7 +9,16 @@
       "Bash(cargo test:*)",
       "Bash(powershell -Command \"Invoke-RestMethod -Uri http://localhost:3000/run -Method Post -ContentType ''application/json'' -Body ''{\"\"variables\"\":[10, 20, 5]}''\")",
       "Bash(powershell -Command \"Invoke-RestMethod -Uri http://localhost:3001/run -Method Post -ContentType ''application/json'' -Body ''{\"\"variables\"\":[100, 30, 5]}''\")",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(cargo --version:*)",
+      "Bash(del \"C:\\Projetos\\ndnm\\ndnm-backend\\ndnm-brazil\\src\\execution.rs\")",
+      "Bash(Remove-Item \"C:\\Projetos\\ndnm\\ndnm-backend\\ndnm-brazil\\src\\execution.rs\")",
+      "Bash(powershell -Command \"Remove-Item ''C:\\Projetos\\ndnm\\ndnm-backend\\ndnm-brazil\\src\\execution.rs''\")",
+      "Bash(powershell -Command \"taskkill /F /IM node-sum.exe 2>$null; taskkill /F /IM ndnm-brazil.exe 2>$null; taskkill /F /IM node-play-button.exe 2>$null\")",
+      "Bash(powershell -Command \"Get-Process | Where-Object {$_ProcessName -match ''node-|ndnm-brazil''} | Stop-Process -Force\")",
+      "Read(//c/Projetos/ndnm/frontend/**)",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []

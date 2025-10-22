@@ -38,6 +38,9 @@ reqwest = { version = "0.12", features = ["json"] }
 # Geração de IDs aleatórios
 rand = "0.8"
 
+# UUID para run_ids
+uuid = { version = "1", features = ["v4", "serde"] }
+
 [dev-dependencies]
 # Para futuros testes
 axum = "0.7"
