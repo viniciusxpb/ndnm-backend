@@ -12,5 +12,6 @@ members = [
     "node-fs-browser",
     "node-play-button",
     "node-comfy-play",
+    "node-ex-doida",
 ]
 resolver = "2"

@@ -1,0 +1,4 @@
+# node-ex-doida/config.yaml
+# Nó de infraestrutura - NÃO deve aparecer no frontend
+port: 3999
+# Sem label/node_type = não será descoberto pelo brazil como node visual

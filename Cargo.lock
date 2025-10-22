@@ -1004,6 +1004,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "node-ex-doida"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "clap",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower-http 0.5.2",
+]
+
+[[package]]
 name = "node-fixed-value"
 version = "0.1.0"
 dependencies = [
