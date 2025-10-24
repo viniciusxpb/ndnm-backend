@@ -1010,8 +1010,10 @@ dependencies = [
  "axum",
  "chrono",
  "clap",
+ "reqwest",
  "serde",
  "serde_json",
+ "serde_yaml",
  "tokio",
  "tower-http 0.5.2",
 ]

@@ -2,3 +2,11 @@
 # Nó de infraestrutura - NÃO deve aparecer no frontend
 port: 3999
 # Sem label/node_type = não será descoberto pelo brazil como node visual
+
+# PPP Debug Agent Configuration
+roast_mode: true
+roast_style: "ppp"          # ppp (aggressive), gentle, savage
+roast_severity: "medium"    # low, medium, high
+use_ai: true                # false = cache only, true = generate new roasts
+ai_endpoint: "http://localhost:11434"  # Ollama endpoint
+enable_easter_eggs: true    # Time-based contextual jokes

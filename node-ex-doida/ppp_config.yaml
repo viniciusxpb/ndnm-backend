@@ -1,0 +1,23 @@
+# PPP Debug Agent Configuration
+# Sarcastic debugging assistant inspired by Ashton Parks from Kino Casino
+
+# AI Model Configuration
+ai:
+  enabled: true                              # Enable/disable AI-generated roasts
+  endpoint: "http://localhost:11434"         # Ollama API endpoint
+  model: "gemma3:1b"                         # Model to use (gemma3:1b, llama3.2, etc.)
+  timeout_seconds: 10                        # Request timeout
+  temperature: 0.9                           # Creativity level (0.0-1.0)
+  top_p: 0.95                                # Nucleus sampling
+
+# Roast Configuration
+roast:
+  enable_easter_eggs: true                   # Time-based contextual jokes
+  style: "ppp"                               # Style: ppp (aggressive), gentle, savage
+  severity: "medium"                         # Severity: low, medium, high
+  max_length: 200                            # Maximum characters per roast
+
+# Logging
+logging:
+  log_ai_failures: true                      # Log when AI generation fails
+  log_cache_hits: false                      # Log when cache is used

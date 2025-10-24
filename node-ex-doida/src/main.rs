@@ -1,6 +1,8 @@
 // node-ex-doida/src/main.rs
 // Node de infraestrutura para logging e configurações
 
+mod roaster;
+
 use axum::{
     extract::State,
     http::StatusCode,
@@ -10,6 +12,7 @@ use axum::{
 };
 use chrono::Utc;
 use clap::Parser;
+use roaster::{PPPConfig, PPPRoaster};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{File, OpenOptions},
@@ -29,6 +32,7 @@ struct Cli {
 #[derive(Debug, Clone)]
 struct AppState {
     log_file_path: Arc<Mutex<PathBuf>>,
+    roaster: Arc<PPPRoaster>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -76,7 +80,15 @@ async fn log_handler(
     // Printar no console do node-ex-doida também
     print!("{}", log_line);
 
-    // Salvar no arquivo
+    // PPP ROASTING - Only for ERROR and WARN levels
+    let mut roast_line = String::new();
+    if entry.level.to_lowercase() == "error" || entry.level.to_lowercase() == "warn" {
+        let roast = state.roaster.roast(&entry.message, &entry.level).await;
+        roast_line = format!("{}\n", roast);
+        print!("{}", roast_line); // Print roast to console too
+    }
+
+    // Salvar no arquivo (log + roast se houver)
     let log_file_path = state.log_file_path.lock().unwrap();
     match OpenOptions::new()
         .create(true)
@@ -84,6 +96,7 @@ async fn log_handler(
         .open(log_file_path.as_path())
     {
         Ok(mut file) => {
+            // Write original log
             if let Err(e) = file.write_all(log_line.as_bytes()) {
                 eprintln!("❌ Erro ao escrever no arquivo de log: {}", e);
                 return (
@@ -94,6 +107,14 @@ async fn log_handler(
                     }),
                 );
             }
+
+            // Write PPP roast if it exists
+            if !roast_line.is_empty() {
+                if let Err(e) = file.write_all(roast_line.as_bytes()) {
+                    eprintln!("❌ Erro ao escrever roast no arquivo: {}", e);
+                }
+            }
+
             if let Err(e) = file.flush() {
                 eprintln!("❌ Erro ao fazer flush do arquivo: {}", e);
             }
@@ -141,8 +162,53 @@ async fn main() {
         }
     }
 
+    // Load PPP configuration
+    let ppp_config_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("ppp_config.yaml");
+    let ppp_config = match PPPConfig::load(&ppp_config_path) {
+        Ok(config) => {
+            println!("✅ [node-ex-doida] PPP config loaded from: {}", ppp_config_path.display());
+            config
+        }
+        Err(e) => {
+            eprintln!("❌ [node-ex-doida] Failed to load PPP config: {}", e);
+            eprintln!("💡 [node-ex-doida] Using default config");
+            // Fallback to hardcoded defaults only if config file is missing
+            PPPConfig {
+                ai: roaster::AIConfig {
+                    enabled: true,
+                    endpoint: "http://localhost:11434".to_string(),
+                    model: "gemma3:1b".to_string(),
+                    timeout_seconds: 10,
+                    temperature: 0.9,
+                    top_p: 0.95,
+                },
+                roast: roaster::RoastConfig {
+                    enable_easter_eggs: true,
+                    style: "ppp".to_string(),
+                    severity: "medium".to_string(),
+                    max_length: 200,
+                },
+                logging: roaster::LoggingConfig {
+                    log_ai_failures: true,
+                    log_cache_hits: false,
+                },
+            }
+        }
+    };
+
+    // Initialize PPP Roaster with config
+    let roaster = PPPRoaster::new(ppp_config);
+
+    // Check if Ollama is available
+    if roaster.check_ollama_available().await {
+        println!("🤖 [node-ex-doida] PPP Agent initialized with AI (Ollama detected)");
+    } else {
+        println!("💾 [node-ex-doida] PPP Agent initialized (cache-only mode, Ollama not detected)");
+    }
+
     let state = AppState {
         log_file_path: Arc::new(Mutex::new(log_file_path)),
+        roaster: Arc::new(roaster),
     };
 
     let cors = CorsLayer::permissive();
