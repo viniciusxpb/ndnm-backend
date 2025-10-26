@@ -8,6 +8,14 @@ pub mod runner;
 // Exports públicos
 pub use node::{Node, async_trait};
 pub use error::AppError;
-pub use config::{NodeConfig, InputFieldConfig};
+pub use config::{
+    NodeConfig,
+    InputFieldConfig,
+    Section,
+    SectionBehavior,
+    SlotDefinition,
+    SlotTemplate,
+    ConnectionMode
+};
 pub use server::{router, serve, ServerOpts};
 pub use runner::{run_node, load_config};

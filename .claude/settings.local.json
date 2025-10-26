@@ -19,7 +19,8 @@
       "Read(//c/Projetos/ndnm/frontend/**)",
       "Bash(npm run build:*)",
       "Bash(npm run dev:*)",
-      "Bash(powershell -Command \"Get-Process | Where-Object {$_ProcessName -match ''node-|ndnm-brazil''} | Select-Object ProcessName, Id\")"
+      "Bash(powershell -Command \"Get-Process | Where-Object {$_ProcessName -match ''node-|ndnm-brazil''} | Select-Object ProcessName, Id\")",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
