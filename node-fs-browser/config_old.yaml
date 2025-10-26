@@ -1,0 +1,13 @@
+# node-fs-browser/config.yaml
+port: 3011
+# Nome mais amigável para o nó visual
+label: "📂 Navegador de Arquivos"
+node_type: "fsBrowser"
+# Sem inputs de fluxo, o path virá do campo 'path' abaixo
+inputs_mode: "0"
+# AGORA TEM SAÍDAS DINÂMICAS! O frontend vai gerar um handle por arquivo/pasta.
+outputs_mode: "n"
+# Define o campo de input para escolher a pasta
+input_fields:
+  - name: "path" # Nome semântico que o frontend (SelectorControl) usará
+    type: "selector" # Tipo que o frontend renderizará como seletor
